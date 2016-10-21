@@ -1,0 +1,278 @@
+import matplotlib
+matplotlib.use('pdf')
+from numpy import *
+from matplotlib import *
+from operator import itemgetter
+from collections import Counter
+from random import randint
+from matplotlib import pyplot
+import collections
+from tabulate import tabulate
+
+def file_to_list(filename):
+    #Puts the file into a 2D list
+    table = []
+    f = open(filename, 'r')
+    for row in f:
+        my_list = re.split(',|\n', row)
+        good = True
+        for token in my_list: #removes any row with missing values
+            if token == 'NA':
+                good = False
+        if good:
+            table.append(my_list)
+    return table
+
+#selects a DOE element to assign
+def DOE_class(mpg):
+    mpg = float(mpg)
+    guessRank = -1
+    if mpg >= 45.0:
+        guessRank = 10
+    if  mpg <= 44.0 and mpg >= 37.0:
+        guessRank = 9
+    if mpg <=36.0 and mpg >= 31.0:
+        guessRank = 8
+    if mpg <= 30.0 and mpg >= 27.0:
+        guessRank = 7
+    if mpg <= 26.0 and mpg >= 24.0:
+        guessRank = 6
+    if mpg <=23.0 and mpg >= 20.0:
+        guessRank = 5
+    if mpg <= 19.0 and mpg >= 17.0:
+        guessRank = 4
+    if mpg <= 16.0 and mpg >= 15.0:
+        guessRank = 3
+    if mpg == 14.0:
+        guessRank = 2
+    if mpg <= 13.0:
+        guessRank = 1
+    return guessRank
+
+#selects a weight element to assign
+def weight_class(weight):
+    weight = int(weight)
+    guessWeight = -1
+    if weight >= 3500:
+        guessWeight = 5
+    if weight <= 3499 and weight >= 3000:
+        guessWeight = 4
+    if weight <= 2999 and weight >= 2500:
+        guessWeight = 3
+    if weight <= 2499 and weight >= 2000:
+        guessWeight = 2
+    if weight <= 1999:
+        guessWeight = 1
+    return guessWeight
+
+def get_mean(table, att, label):
+    total = 0.0
+    count = 0.0
+    for row in table:
+        if row[att] != 'NA' and DOE_class(row[0]) == label:
+            total += float(row[att])
+            count += 1.0
+    if count > 0.0:
+        total = total / count
+    return total
+
+def get_std_dev(table, att, label):
+    vals = []
+    for row in table:
+        if row[att] != 'NA' and DOE_class(row[0]) == label:
+            vals.append(float(row[att]))
+    return numpy.std(vals)
+
+def gaussian(x, mean, sdev):
+    first, second = 0, 0
+    if sdev > 0:
+        first = 1 / (math.sqrt(2 * math.pi) * sdev)
+        second = math.e ** (-((float(x) - mean) ** 2) / (2 * (sdev ** 2)))
+    return first * second
+
+#returns a probability of the given label
+def get_prob(label, table, testRow):
+    total1 = 0.0 #P(cycliner|C)
+    total2 = 0.0 #P(weight|C)
+    total3 = 0.0 #P(model year|C)
+    totalAll = 0.0 #P(C)
+    total = 0.0
+    for row in table:
+        if DOE_class(row[0]) == label:
+            total += 1.0
+            totalAll += 1.0
+            if (row[1] == testRow[1]): #cylinders
+                total1 += 1.0
+            if weight_class(row[4]) == weight_class(testRow[4]): #weight
+                total2 += 1.0
+            if row[6] == testRow[6]: #model year
+                total3 += 1.0
+
+    if total != 0.0:
+        total1 = total1 / total
+        total2 = total2 / total
+        total3 = total3 / total
+
+    totalAll = totalAll / float(len(table))
+    total = total1 * total2 * total3
+    labelChance = total * totalAll
+    return labelChance
+
+def get_prob_cont(label, table, testRow):
+    total1 = 0.0  # P(cycliner|C)
+    total2 = 0.0  # P(weight|C)
+    total3 = 0.0  # P(model year|C)
+    totalAll = 0.0  # P(C)
+    total = 0.0
+    for row in table:
+        if DOE_class(row[0]) == label:
+            total += 1.0
+            totalAll += 1.0
+            if (row[1] == testRow[1]):  # cylinders
+                total1 += 1.0
+            if row[6] == testRow[6]:  # model year
+                total3 += 1.0
+
+    mean = get_mean(table, 4, label)
+    std = get_std_dev(table, 4, label)
+    p = gaussian(testRow[4], mean, std)
+
+    if total != 0.0:
+        total1 = total1 / total
+        #total2 = total2 / total
+        total3 = total3 / total
+
+    totalAll = totalAll / float(len(table))
+    total = total1 * p * total3
+    labelChance = total * totalAll
+    return labelChance
+
+def acc_check(table):
+    acc = 0.0
+    for row in table:
+        probs = [-2] #each row has a list of 10 probabilities for each of the DOE
+                     #labels, the -2 is added to fill the 0 index
+        for i in range(1, 11):
+            probs.append(get_prob(i, table, row))
+        guess = probs.index(max(probs))
+        if guess == DOE_class(row[0]):
+            acc += 1.0
+        print(str(guess) + ' vs ' + str(DOE_class(row[0])))
+    acc = acc / (len(table) * 1.0)
+    print(acc)
+
+def holdout_partition(table1):
+    randomized = table1[:]
+    n = len(table1)
+    for i in range(n):
+        j = randint(0, n-1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]
+    n0 = (n * 2)/3
+    return randomized[0:n0], randomized[n0:]
+
+def NB_step_2(table):
+    print('Step 2')
+    print(' ')
+    n = [0, 4, 1, 5]
+    for i in range(0, 5):
+        probs = [-2]
+        for j in range(1, 11):
+            probs.append(get_prob(j, table, table[i]))
+        prediction = probs.index(max(probs))
+        realRank = DOE_class(float(table[i][0]))
+
+        print(table[i])
+        print('class: ' + str(prediction) + ' actual: ' + str(realRank))
+
+def NB_step_3(table):
+    k = 3
+    totalAcc = 0
+    for i in range(0, k):
+        TP = 0.0
+        sets = holdout_partition(table)
+        n = [0, 4, 1, 5]
+        for item in sets[1]:
+            probs = [-2]
+            for j in range(1, 11):
+                probs.append(get_prob(j, sets[0], item))
+            prediction = probs.index(max(probs))
+            realRank = DOE_class(float(item[0]))
+            if prediction == realRank:
+                TP += 1.0
+        accuracy = TP / len(sets[1]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+    print('NB: accuracy: ' + str(totalAcc) + ', error rate: ' + str(1 - totalAcc))
+
+def NB_step_3_cont(table):
+    k = 3
+    totalAcc = 0
+    for i in range(0, k):
+        TP = 0.0
+        sets = holdout_partition(table)
+        n = [0, 4, 1, 5]
+        for item in sets[1]:
+            probs = [-2]
+            for j in range(1, 11):
+                probs.append(get_prob_cont(j, sets[0], item))
+            prediction = probs.index(max(probs))
+            realRank = DOE_class(float(item[0]))
+            if prediction == realRank:
+                TP += 1.0
+        accuracy = TP / len(sets[1]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+    print('NB: accuracy: ' + str(totalAcc) + ', error rate: ' + str(1 - totalAcc))
+
+def sum_row(row):
+    # prints the sum of the rows without the first column
+    return sum([row[i + 1] for i in range(len(row) - 1)])
+
+def add_col(table,value):
+    for row in table:
+        row.append(value)
+    return table
+
+def add_sum_col(table):
+    #calculates total for tabulate data
+    for row in table:
+        row.append(sum_row(row))
+    return table
+
+def NB_step_4(table):
+    test1 = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
+    add_col(test1, 0)
+    add_col(test1, 0)
+    add_col(test1, 0)
+    add_col(test1, 2)
+    add_col(test1, 0)
+    add_col(test1, 0)
+    add_col(test1, 0)
+    add_col(test1, 5)
+    add_col(test1, 0)
+    add_col(test1, 0)
+    add_sum_col(test1)
+    print (tabulate(test1, headers=["MPG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Total", "Recognition(%)"]))
+
+
+def main():
+    tableMaster = file_to_list('prof-auto-data.txt')
+    theRow = tableMaster[0]
+
+    probs = [-2]
+    acc = 0.0
+    for i in range(1, 11):
+        probs.append(get_prob(i, tableMaster, theRow))
+    guess = probs.index(max(probs))
+    print(str(guess) + ' vs ' + str(DOE_class(theRow[0])))
+
+    #acc_check(tableMaster)
+    NB_step_3(tableMaster)
+    print(' ')
+    NB_step_2(tableMaster)
+    print(' ')
+    NB_step_3_cont(tableMaster)
+    #NB_step_4(tableMaster)
+
+if __name__== '__main__':
+    main()
