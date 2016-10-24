@@ -259,6 +259,38 @@ def NB_step_4(table):
     add_sum_col(test1)
     print (tabulate(test1, headers=["MPG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Total", "Recognition(%)"]))
 
+def NB_step_4(table):
+    # initializes the table
+    confusion_table = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
+    for row in confusion_table:
+        for i in range(10):
+            row.append(0)
+
+    #fill in table with prediction vs actual
+    for row in table:
+        actual = row[0]
+        pred = row[1]
+        confusion_table[actual-1][pred]+= 1
+
+    #adds totals column
+    add_sum_col(confusion_table)
+
+    #adds recognition column
+    i = 1
+    for row in confusion_table:
+        x = confusion_table[i-1][i]
+        if x ==0 or row[11] == 0:
+            row.append(0)
+        else:
+            reg = 100 * float(x)/float(row[11])
+            row.append(reg)
+        i += 1
+    print ('===================================================================================')
+    print ('Naive Bayes: Confusion Matrices')
+    print ('===================================================================================')
+    print ('Linear Regression(Stratified 10-fold Cross Validation Results):')
+    print (tabulate(confusion_table, headers=["MPG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Total", "Recognition(%)"]))
+
 
 def main():
     tableMaster = file_to_list('prof-auto-data.txt')
