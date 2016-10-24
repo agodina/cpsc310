@@ -245,21 +245,6 @@ def add_sum_col(table):
     return table
 
 def NB_step_4(table):
-    test1 = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
-    add_col(test1, 0)
-    add_col(test1, 0)
-    add_col(test1, 0)
-    add_col(test1, 2)
-    add_col(test1, 0)
-    add_col(test1, 0)
-    add_col(test1, 0)
-    add_col(test1, 5)
-    add_col(test1, 0)
-    add_col(test1, 0)
-    add_sum_col(test1)
-    print (tabulate(test1, headers=["MPG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Total", "Recognition(%)"]))
-
-def NB_step_4(table):
     # initializes the table
     confusion_table = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
     for row in confusion_table:
