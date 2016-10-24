@@ -78,10 +78,15 @@ def get_mean(table, att, label):
 
 def get_std_dev(table, att, label):
     vals = []
+    filled = False #if there are no rows with the label, then the list will be empty
     for row in table:
         if row[att] != 'NA' and DOE_class(row[0]) == label:
             vals.append(float(row[att]))
-    return numpy.std(vals)
+            filled = True
+    if filled: #only calculate a std if there are values in the list
+        return numpy.std(vals)
+    else:
+        return 500 #500 was chosen as it was a relitively high number for the given dataset
 
 def gaussian(x, mean, sdev):
     first, second = 0, 0
