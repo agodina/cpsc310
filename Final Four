@@ -366,7 +366,7 @@ def conf_step_4(table):
             row.append(reg)
         i += 1
     print ('===================================================================================')
-    print ('Titanic: Naive Bayes: Confusion Matrices')
+    print ('Titanic: Confusion Matrices')
     print ('===================================================================================')
     print (tabulate(confusion_table, headers=["Survived", "Yes", "No" "Total", "Recognition(%)"]))
 
@@ -458,7 +458,7 @@ def NB_hw4_step_3(table):
         accuracy = TP / len(sets[1]) * 1.0
         totalAcc += accuracy
     totalAcc = totalAcc / (k * 1.0)
-    print('NB Titanic: accuracy: ' + str(totalAcc) + ', error rate: ' + str(1 - totalAcc))
+    print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
     return class_table
 
 def distance(row, instance):
@@ -519,7 +519,7 @@ def KNN_titanic(table):
         accuracy = TP / len(sets[1]) * 1.0
         totalAcc += accuracy
     totalAcc = totalAcc / (k * 1.0)
-    print('K nearest neighbor Titanic: accuracy: ' + str(totalAcc) + ', error rate: ' + str(1 - totalAcc))
+    print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
     return class_table
 
 def GNB_step_two(table):
@@ -610,11 +610,15 @@ def main():
     print(' ')
     conf_G=NB_Stratified_G(tableMaster)
     NB_step_4(conf_G)
-   tableTitanic = file_to_list('titanic.txt')
+
+    tableTitanic = file_to_list('titanic.txt')
     print ('')
     print ('Titanic:')
+    print('Naive Bayes:')
     conf_NB = NB_hw4_step_3(tableTitanic)
     conf_step_4(conf_NB)
+    print('')
+    print('K-Nearest Neighbor:')
     conf_knn = KNN_titanic(tableTitanic)
     conf_step_4(conf_knn)
 
