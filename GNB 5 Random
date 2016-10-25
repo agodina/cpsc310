@@ -1,0 +1,13 @@
+def GNB_step_two(table):
+    print('Step 2 using gaussian')
+    print(' ')
+    n = [0, 4, 1, 5]
+    for i in range(0, 5):
+        probs = [-2]
+        for j in range(1, 11):
+            probs.append(get_prob_cont(j, table, table[i]))
+        prediction = probs.index(max(probs))
+        realRank = DOE_class(float(table[i][0]))
+
+        print(table[i])
+        print('class: ' + str(prediction) + ' actual: ' + str(realRank))
