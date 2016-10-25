@@ -1,0 +1,622 @@
+import matplotlib
+matplotlib.use('pdf')
+from numpy import *
+from matplotlib import *
+from operator import itemgetter
+from collections import Counter
+from random import randint
+from matplotlib import pyplot
+import collections
+from tabulate import tabulate
+
+def file_to_list(filename):
+    #Puts the file into a 2D list
+    table = []
+    f = open(filename, 'r')
+    for row in f:
+        my_list = re.split(',|\n', row)
+        good = True
+        for token in my_list: #removes any row with missing values
+            if token == 'NA':
+                good = False
+        if good:
+            table.append(my_list)
+    return table
+
+#selects a DOE element to assign
+def DOE_class(mpg):
+    mpg = float(mpg)
+    guessRank = -1
+    if mpg >= 45.0:
+        guessRank = 10
+    if  mpg < 45.0 and mpg >= 37.0:
+        guessRank = 9
+    if mpg < 37.0 and mpg >= 31.0:
+        guessRank = 8
+    if mpg < 31.0 and mpg >= 27.0:
+        guessRank = 7
+    if mpg < 27.0 and mpg >= 24.0:
+        guessRank = 6
+    if mpg < 24.0 and mpg >= 20.0:
+        guessRank = 5
+    if mpg < 20.0 and mpg >= 17.0:
+        guessRank = 4
+    if mpg < 17.0 and mpg >= 15.0:
+        guessRank = 3
+    if mpg < 15.0 and mpg >= 13.0:
+        guessRank = 2
+    if mpg < 13.0:
+        guessRank = 1
+    return guessRank
+
+#selects a weight element to assign
+def weight_class(weight):
+    weight = int(weight)
+    guessWeight = -1
+    if weight >= 3500:
+        guessWeight = 5
+    if weight <= 3499 and weight >= 3000:
+        guessWeight = 4
+    if weight <= 2999 and weight >= 2500:
+        guessWeight = 3
+    if weight <= 2499 and weight >= 2000:
+        guessWeight = 2
+    if weight <= 1999:
+        guessWeight = 1
+    return guessWeight
+
+def get_mean(table, att, label):
+    total = 0.0
+    count = 0.0
+    for row in table:
+        if row[att] != 'NA' and DOE_class(row[0]) == label:
+            total += float(row[att])
+            count += 1.0
+    if count > 0.0:
+        total = total / count
+    return total
+
+
+def get_std_dev(table, att, label):
+    vals = []
+    filled = False #if there are no rows with the label, then the list will be empty
+    for row in table:
+        if row[att] != 'NA' and DOE_class(row[0]) == label:
+            vals.append(float(row[att]))
+            filled = True
+    if filled: #only calculate a std if there are values in the list
+        return numpy.std(vals)
+    else:
+        return 500 #500 was chosen as it was a relitively high number for the given dataset
+
+def gaussian(x, mean, sdev):
+    first, second = 0, 0
+    if sdev > 0:
+        first = 1 / (math.sqrt(2 * math.pi) * sdev)
+        second = math.e ** (-((float(x) - mean) ** 2) / (2 * (sdev ** 2)))
+    return first * second
+
+#returns a probability of the given label
+def get_prob(label, table, testRow):
+    total1 = 0.0 #P(cycliner|C)
+    total2 = 0.0 #P(weight|C)
+    total3 = 0.0 #P(model year|C)
+    totalAll = 0.0 #P(C)
+    total = 0.0
+    for row in table:
+        if DOE_class(row[0]) == label:
+            total += 1.0
+            totalAll += 1.0
+            if (row[1] == testRow[1]): #cylinders
+                total1 += 1.0
+            if weight_class(row[4]) == weight_class(testRow[4]): #weight
+                total2 += 1.0
+            if row[6] == testRow[6]: #model year
+                total3 += 1.0
+
+    if total != 0.0:
+        total1 = total1 / total
+        total2 = total2 / total
+        total3 = total3 / total
+
+    totalAll = totalAll / float(len(table))
+    total = total1 * total2 * total3
+    labelChance = total * totalAll
+    return labelChance
+
+def get_prob_cont(label, table, testRow):
+    total1 = 0.0  # P(cycliner|C)
+    total2 = 0.0  # P(weight|C)
+    total3 = 0.0  # P(model year|C)
+    totalAll = 0.0  # P(C)
+    total = 0.0
+    for row in table:
+        if DOE_class(row[0]) == label:
+            total += 1.0
+            totalAll += 1.0
+            if (row[1] == testRow[1]):  # cylinders
+                total1 += 1.0
+            if row[6] == testRow[6]:  # model year
+                total3 += 1.0
+
+    mean = get_mean(table, 4, label)
+    std = get_std_dev(table, 4, label)
+    p = gaussian(testRow[4], mean, std)
+
+    if total != 0.0:
+        total1 = total1 / total
+        #total2 = total2 / total
+        total3 = total3 / total
+
+    totalAll = totalAll / float(len(table))
+    total = total1 * p * total3
+    labelChance = total * totalAll
+    return labelChance
+
+def acc_check(table):
+    acc = 0.0
+    for row in table:
+        probs = [-2] #each row has a list of 10 probabilities for each of the DOE
+                     #labels, the -2 is added to fill the 0 index
+        for i in range(1, 11):
+            probs.append(get_prob(i, table, row))
+        guess = probs.index(max(probs))
+        if guess == DOE_class(row[0]):
+            acc += 1.0
+        print(str(guess) + ' vs ' + str(DOE_class(row[0])))
+    acc = acc / (len(table) * 1.0)
+    print(acc)
+
+def holdout_partition(table1):
+    randomized = table1[:]
+    n = len(table1)
+    for i in range(n):
+        j = randint(0, n-1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]
+    n0 = (n * 2)/3
+    return randomized[0:n0], randomized[n0:]
+
+def NB_step_2(table):
+    values=[]
+    print ('===================================================================================')
+    print ('Naive Bayes: Classifier')
+    print ('===================================================================================')
+    n = [0, 4, 1, 5]
+    val = []
+    for i in range(0, 5):
+        x = randint(0,len(table))
+        probs = [-2]
+        for j in range(1, 11):
+            probs.append(get_prob(j, table, table[x]))
+        prediction = probs.index(max(probs))
+        realRank = DOE_class(float(table[x][0]))
+        print(table[x])
+        print('class: ' + str(prediction) + ' actual: ' + str(realRank))
+        val.append([(prediction),(realRank)])
+    return val
+
+def NB_step_3(table):
+    print('')
+    print ('===================================================================================')
+    print ('Naive Bayes: Predictive Accuracy')
+    print ('===================================================================================')
+    k = 3
+    totalAcc = 0
+    for i in range(0, k):
+        TP = 0.0
+        sets = holdout_partition(table)
+        n = [0, 4, 1, 5]
+        for item in sets[1]:
+            probs = [-2]
+            for j in range(1, 11):
+                probs.append(get_prob(j, sets[0], item))
+            prediction = probs.index(max(probs))
+            realRank = DOE_class(float(item[0]))
+            if prediction == realRank:
+                TP += 1.0
+        accuracy = TP / len(sets[1]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+    print('Random Subsample:')
+    print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
+    print('')
+
+def NB_Stratified(table):
+    randomized = table[:]  # this will randomize the table we passed in
+    n = len(table)
+    for i in range(n):
+        j = randint(0, n - 1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]  # changes all the positions of the item in the list
+
+    k = 10
+    empty = [[] for i in range(k)]  # the empty 10-folds
+    count = 0
+    temp = randomized
+    vals = []
+    for item in temp:
+        vals.append(weight_class(item[4]))  # gets the class values of the weight
+
+    for i in range(1, 6):
+        for j in range(len(vals)):
+            if (vals[j] == i):
+                if count == 10:
+                    count = 0
+                empty[count].append(temp[j])
+                count += 1
+    class_table = []
+    totalAcc = 0
+
+    for i in range(0, k):
+        training = []
+        training = empty[(i+1)%10] + empty[(i+2)%10] + empty[(i+3)%10]+ empty[(i+4)%10]+ empty[(i+5)%10]+ empty[(i+6)%10]+ empty[(i+7)%10]+ empty[(i+8)%10]+ empty[(i+9)%10]+ empty[(i+10)%10]
+        TP = 0.0
+        for item in empty[i]:
+            probs = [-2]
+            for j in range(1, 11):
+                probs.append(get_prob(j, training, item))
+            prediction = probs.index(max(probs))
+            realRank = DOE_class(float(item[0]))
+            if prediction == realRank:
+                TP += 1.0
+            class_table.append([(prediction), (realRank)])
+        accuracy = TP / len(empty[i]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+
+    print ('Stratified 10-Fold Cross Validation')
+    print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
+    return class_table
+
+def NB_step_3_cont(table):
+    k = 3
+    totalAcc = 0
+    for i in range(0, k):
+        TP = 0.0
+        sets = holdout_partition(table)
+        for item in sets[1]:
+            probs = [-2]
+            for j in range(1, 11):
+                probs.append(get_prob_cont(j, sets[0], item))
+            prediction = probs.index(max(probs))
+            realRank = DOE_class(float(item[0]))
+            if prediction == realRank:
+                TP += 1.0
+        accuracy = TP / len(sets[1]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+    print ('===================================================================================')
+    print ('Naive Bayes: Predictive Accuracy')
+    print ('===================================================================================')
+    print('Random Subsample:')
+    print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
+
+def sum_row(row):
+    # prints the sum of the rows without the first column
+    return sum([row[i + 1] for i in range(len(row) - 1)])
+
+def add_sum_col(table):
+    #calculates total for tabulate data
+    for row in table:
+        row.append(sum_row(row))
+    return table
+
+def NB_step_4(table):
+    # initializes the table
+    confusion_table = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
+    for row in confusion_table:
+        for i in range(10):
+            row.append(0)
+
+    #fill in table with prediction vs actual
+    for row in table:
+        actual = row[0]
+        pred = row[1]
+        confusion_table[actual-1][pred]+= 1
+
+    #adds totals column
+    add_sum_col(confusion_table)
+
+    #adds recognition column
+    i = 1
+    for row in confusion_table:
+        x = confusion_table[i-1][i]
+        if x ==0 or row[11] == 0:
+            row.append(0)
+        else:
+            reg = 100 * float(x)/float(row[11])
+            row.append(reg)
+        i += 1
+    print ('===================================================================================')
+    print ('Naive Bayes: Confusion Matrices')
+    print ('===================================================================================')
+    print ('Linear Regression(Stratified 10-fold Cross Validation Results):')
+    print (tabulate(confusion_table, headers=["MPG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Total", "Recognition(%)"]))
+
+def conf_step_4(table):
+    # initializes the table
+    confusion_table = [['Yes'], ['No']]
+    for row in confusion_table:
+        for i in range(2):
+            row.append(0)
+    #fill in table with prediction vs actual
+    for row in table:
+        actual = row[0]
+        pred = row[1]
+        if actual == 'yes' and pred == 'yes':
+            confusion_table[0][1]+=1
+        if actual == 'yes' and pred == 'no':
+            confusion_table[0][2] += 1
+        if actual == 'no' and pred == 'yes':
+            confusion_table[1][1] += 1
+        if actual == 'no' and pred == 'no':
+            confusion_table[1][2]
+        #confusion_table[actual-1][pred]+= 1
+
+    #adds totals column
+    add_sum_col(confusion_table)
+
+    #adds recognition column
+    i = 1
+    for row in confusion_table:
+        x = confusion_table[i-1][i]
+        if x ==0 or row[3] == 0:
+            row.append(0)
+        else:
+            reg = 100 * float(x)/float(row[3])
+            row.append(reg)
+        i += 1
+    print ('===================================================================================')
+    print ('Titanic: Naive Bayes: Confusion Matrices')
+    print ('===================================================================================')
+    print (tabulate(confusion_table, headers=["Survived", "Yes", "No" "Total", "Recognition(%)"]))
+
+#returns a probability of the given label
+def get_prob_titanic(label, table, testRow):
+    total1 = 0.0 #P(class|C)
+    total2 = 0.0 #P(age|C)
+    total3 = 0.0 #P(sex|C)
+    totalAll = 0.0 #P(C)
+    total = 0.0
+    for row in table:
+        if row[3] == label:
+            total += 1.0
+            totalAll += 1.0
+            if (row[0] == testRow[0]): #class
+                total1 += 1.0
+            if row[1] == testRow[1]: #age
+                total2 += 1.0
+            if row[2] == testRow[2]: #sex
+                total3 += 1.0
+
+    if total != 0.0:
+        total1 = total1 / total
+        total2 = total2 / total
+        total3 = total3 / total
+
+    totalAll = totalAll / float(len(table))
+    total = total1 * total2 * total3
+    labelChance = total * totalAll
+    return labelChance
+
+def titanic_class(table):
+    temporary = []
+    for row in table:
+        if row[3] == 'yes':
+            temporary.append(float(1))
+        else:
+            temporary.append(float(0))
+    return temporary
+
+def NB_Stratfied_titanic(table):
+    randomized = table[:]  # this will randomize the table we passed in
+    n = len(table)
+    for i in range(n):
+        j = randint(0, n - 1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]  # changes all the positions of the item in the list
+
+    temporary = titanic_class(randomized)
+
+    k = 10
+    empty = [[] for i in range(k)]  # the empty 10-folds
+    count = 0
+
+    for i in range(0, 2):
+        for j in range(len(temporary)):
+            if (temporary[j] == i):
+                if count == 10:
+                    count = 0
+                empty[count].append(randomized[j])
+                count += 1
+    return empty
+
+def NB_hw4_step_3(table):
+    k = 3
+    class_table = []
+    totalAcc = 0
+    for i in range(0, k):
+        TP = 0.0
+        sets = NB_Stratfied_titanic(table)
+        r = random.randint(10)
+        training = []
+        for j in range(0, len(sets)):
+            if r != j:
+                for row in sets[j]:
+                    training.append(row)
+        for item in sets[r]:
+            probs = []
+            probs.append(get_prob_titanic('yes', training, item))
+            probs.append(get_prob_titanic('no', training, item))
+            prediction = probs.index(max(probs))
+            if prediction == 0:
+                prediction = 'yes'
+            else:
+                prediction = 'no'
+            realRank = item[3]
+            if prediction == realRank:
+                TP += 1.0
+            class_table.append([(prediction), (realRank)])
+        accuracy = TP / len(sets[1]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+    print('NB Titanic: accuracy: ' + str(totalAcc) + ', error rate: ' + str(1 - totalAcc))
+    return class_table
+
+def distance(row, instance):
+    dist = 0
+    if instance[0] != row[0]:
+        dist += 1
+    if instance[1] != row[1]:
+        dist += 1
+    if instance[2] != row[2]:
+        dist += 1
+    return dist
+
+def get_top_k(distances, k):
+    distances.sort(key=itemgetter(0))
+    results = []
+    for i in range(0, k):
+        results.append(distances[i])
+    return results
+
+def select_class_label(rows):
+    ranks = []
+    for item in rows:
+        ranks.append(item[1][3])
+    m = Counter(ranks)
+    mode = m.most_common(1)[0][0]
+    return mode
+
+def k_nn_classifier(training_set, n, instance, k):
+    row_distances = []
+    #This gets values for each column we will use so we can normalize the values individually
+    for row in training_set:
+        d = distance(row, instance)
+        row_distances.append([d, row])
+    top_k_rows = get_top_k(row_distances, k)
+    label = select_class_label(top_k_rows)
+    return label
+
+def KNN_titanic(table):
+    k = 3
+    class_table = []
+    totalAcc = 0
+    for i in range(0, k):
+        TP = 0.0
+        sets = NB_Stratfied_titanic(table)
+        r = random.randint(10)
+        training = []
+        for j in range(0, len(sets)):
+            if r != j:
+                for row in sets[j]:
+                    training.append(row)
+        n = [0, 1, 2, 3]
+        for item in sets[r]:
+            prediction = k_nn_classifier(training, n, item, 3)
+            realRank = item[3]
+            if prediction == realRank:
+                TP += 1.0
+            class_table.append([(prediction), (realRank)])
+        accuracy = TP / len(sets[1]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+    print('K nearest neighbor Titanic: accuracy: ' + str(totalAcc) + ', error rate: ' + str(1 - totalAcc))
+    return class_table
+
+def GNB_step_two(table):
+    print('Step 2 using gaussian')
+    print(' ')
+    n = [0, 4, 1, 5]
+    for i in range(0, 5):
+        x = randint(0, len(table))
+        probs = [-2]
+        for j in range(1, 11):
+            probs.append(get_prob_cont(j, table, table[x]))
+        prediction = probs.index(max(probs))
+        realRank = DOE_class(float(table[x][0]))
+
+        print(table[x])
+        print('class: ' + str(prediction) + ' actual: ' + str(realRank))
+
+def NB_Stratified_G(table):
+    randomized = table[:]  # this will randomize the table we passed in
+    n = len(table)
+    for i in range(n):
+        j = randint(0, n - 1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]  # changes all the positions of the item in the list
+
+    k = 10
+    empty = [[] for i in range(k)]  # the empty 10-folds
+    count = 0
+    temp = randomized
+    vals = []
+    for item in temp:
+        vals.append(weight_class(item[4]))  # gets the class values of the weight
+
+    for i in range(1, 6):
+        for j in range(len(vals)):
+            if (vals[j] == i):
+                if count == 10:
+                    count = 0
+                empty[count].append(temp[j])
+                count += 1
+    class_table = []
+    totalAcc = 0
+
+    for i in range(0, k):
+        training = []
+        training = empty[(i+1)%10] + empty[(i+2)%10] + empty[(i+3)%10]+ empty[(i+4)%10]+ empty[(i+5)%10]+ empty[(i+6)%10]+ empty[(i+7)%10]+ empty[(i+8)%10]+ empty[(i+9)%10]+ empty[(i+10)%10]
+        TP = 0.0
+        for item in empty[i]:
+            probs = [-2]
+            for j in range(1, 11):
+                probs.append(get_prob_cont(j, training, item))
+            prediction = probs.index(max(probs))
+            realRank = DOE_class(float(item[0]))
+            if prediction == realRank:
+                TP += 1.0
+            class_table.append([(prediction), (realRank)])
+        accuracy = TP / len(empty[i]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+
+    print ('Stratified 10-Fold Cross Validation')
+    print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
+    return class_table
+
+def main():
+    tableMaster = file_to_list('auto-data.txt')
+    theRow = tableMaster[0]
+
+    probs = [-2]
+    acc = 0.0
+    for i in range(1, 11):
+        probs.append(get_prob(i, tableMaster, theRow))
+    guess = probs.index(max(probs))
+    #print(str(guess) + ' vs ' + str(DOE_class(theRow[0])))
+
+    #acc_check(tableMaster)
+
+    print(' ')
+    print ('STEP 1')
+    NB_step_2(tableMaster)
+    print(' ')
+    NB_step_3(tableMaster)
+    class_table = NB_Stratified(tableMaster)
+    print(' ')
+    NB_step_4(class_table)
+    print(' ')
+    GNB_step_two(tableMaster)
+    NB_step_3_cont(tableMaster)
+    print(' ')
+    conf_G=NB_Stratified_G(tableMaster)
+    NB_step_4(conf_G)
+
+
+    tableTitanic = file_to_list('titanic.txt')
+    conf_NB = NB_hw4_step_3(tableTitanic)
+    conf_step_4(conf_NB)
+    conf_knn = KNN_titanic(tableTitanic)
+    conf_step_4(conf_knn)
+
+if __name__== '__main__':
+    main()
