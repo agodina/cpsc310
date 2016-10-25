@@ -1,3 +1,9 @@
+"""
+Authors: Chioma Mekkam & Andrea Godina & Chris Leu
+Assignment: HW4.py
+Purpose: The objective of this program is to take use data from the auto-data.txt,
+and titanic.txt file and analyze the data
+"""
 import matplotlib
 matplotlib.use('pdf')
 from numpy import *
