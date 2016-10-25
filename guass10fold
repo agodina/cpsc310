@@ -1,0 +1,24 @@
+def NB_step_3_cont_ten_fold(table):
+    k = 3
+    totalAcc = 0
+    for i in range(0, k):
+        TP = 0.0
+        sets = NB_Stratified(table)
+        r = random.randint(10)
+        training = []
+        for j in range(0, len(sets)):
+            if r != j:
+                for row in sets[j]:
+                    training.append(row)
+        for item in sets[r]:
+            probs = [-2]
+            for j in range(1, 11):
+                probs.append(get_prob_cont(j, training, item))
+            prediction = probs.index(max(probs))
+            realRank = DOE_class(float(item[0]))
+            if prediction == realRank:
+                TP += 1.0
+        accuracy = TP / len(sets[1]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+    print('NB guass 10 fold: accuracy: ' + str(totalAcc) + ', error rate: ' + str(1 - totalAcc))
