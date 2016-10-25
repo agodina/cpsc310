@@ -349,7 +349,7 @@ def conf_step_4(table):
         if actual == 'no' and pred == 'yes':
             confusion_table[1][1] += 1
         if actual == 'no' and pred == 'no':
-            confusion_table[1][2]
+            confusion_table[1][2] += 1
         #confusion_table[actual-1][pred]+= 1
 
     #adds totals column
@@ -610,9 +610,9 @@ def main():
     print(' ')
     conf_G=NB_Stratified_G(tableMaster)
     NB_step_4(conf_G)
-
-
-    tableTitanic = file_to_list('titanic.txt')
+   tableTitanic = file_to_list('titanic.txt')
+    print ('')
+    print ('Titanic:')
     conf_NB = NB_hw4_step_3(tableTitanic)
     conf_step_4(conf_NB)
     conf_knn = KNN_titanic(tableTitanic)
