@@ -285,7 +285,7 @@ def NB_step_3_cont(table):
         totalAcc += accuracy
     totalAcc = totalAcc / (k * 1.0)
     print ('===================================================================================')
-    print ('Naive Bayes: Predictive Accuracy')
+    print ('Naive Bayes Using Gaussian Predictive Accuracy')
     print ('===================================================================================')
     print('Random Subsample:')
     print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
@@ -350,7 +350,6 @@ def conf_step_4(table):
             confusion_table[1][1] += 1
         if actual == 'no' and pred == 'no':
             confusion_table[1][2] += 1
-        #confusion_table[actual-1][pred]+= 1
 
     #adds totals column
     add_sum_col(confusion_table)
@@ -523,8 +522,11 @@ def KNN_titanic(table):
     return class_table
 
 def GNB_step_two(table):
-    print('Step 2 using gaussian')
-    print(' ')
+    print('')
+    print('STEP 2 ')
+    print ('===================================================================================')
+    print ('Naive Bayes using Gaussian: Classifier')
+    print ('===================================================================================')
     n = [0, 4, 1, 5]
     for i in range(0, 5):
         x = randint(0, len(table))
@@ -599,7 +601,6 @@ def main():
     print(' ')
     print ('STEP 1')
     NB_step_2(tableMaster)
-    print(' ')
     NB_step_3(tableMaster)
     class_table = NB_Stratified(tableMaster)
     print(' ')
@@ -610,6 +611,7 @@ def main():
     print(' ')
     conf_G=NB_Stratified_G(tableMaster)
     NB_step_4(conf_G)
+
 
     tableTitanic = file_to_list('titanic.txt')
     print ('')
