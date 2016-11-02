@@ -92,9 +92,18 @@ def get_best_index(table, indexes):
 
 def main():
     tableMaster = read_csv('titanic.txt')
+    atts = [0, 1, 2]
+    best = get_best_index(tableMaster, atts)
+    atts.remove(best)
+    grouped = group_by(tableMaster, best)
+    for item in grouped:
+        print(item)
+    for partion in grouped:
+        best = get_best_index(tableMaster, [0, 1])
+        groups = group_by(partion, best)
+        for item in groups:
+            print(item)
 
-    print calc_estart(tableMaster, 3)
-    get_best_index(tableMaster, [0, 1, 2])
 
 
 if __name__ == '__main__':
