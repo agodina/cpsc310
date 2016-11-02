@@ -71,7 +71,11 @@ def calc_enew(instances, att_index, class_index):
     E_new = 0
     for att_val in freqs:
         D_j = float(freqs[att_val][1])
-        probs = [(c / D_j) for (_, c) in freqs[att_val][0].items()]
+        probs = []
+        for (_, c) in freqs[att_val][0].items():
+            if c != 0:
+                probs.append(c / D_j)
+        #probs = [(c / D_j) for (_, c) in freqs[att_val][0].items()]
         E_D_j = -sum([p * log(p, 2) for p in probs])
         E_new += (D_j / D) * E_D_j
     return E_new
@@ -95,29 +99,34 @@ def get_best_index(table, indexes):
         e_start = calc_estart(table, 3)
         e_new = calc_enew(table, att, 3)
         e_news.append(e_start - e_new)
-    print(e_news.index((max(e_news))))
-    return e_news.index((max(e_news)))
+    print(indexes[e_news.index(max(e_news))])
+    return indexes[e_news.index(max(e_news))]
 
 
 '''def info_gain(instances, att_index, class_index):
     e_start = calc_estart(instances, att_index)'''
 
+def split_tables(table, atts, final):
+    if len(atts) < 1:
+        return
+    this_atts = atts[:]
+    best = get_best_index(table, this_atts)
+    this_atts.remove(best)
+    grouped = group_by(table, best)
+    for item in grouped:
+        if len(atts) == 1: #this checks if it will be a leaf
+            final.append(item)
+    for item in grouped:
+        split_tables(item, this_atts, final)
+    return final
 
 def main():
     tableMaster = read_csv('titanic.txt')
     atts = [0, 1, 2]
-    best = get_best_index(tableMaster, atts)
-    atts.remove(best)
-    grouped = group_by(tableMaster, best)
-    for item in grouped:
-        print(item)
-    for partion in grouped:
-        best = get_best_index(tableMaster, [0, 1])
-        groups = group_by(partion, best)
-        for item in groups:
-            print(item)
-
-
+    final = []
+    final = split_tables(tableMaster, atts, final)
+    for row in final:
+        print(row)
 
 if __name__ == '__main__':
     main()
