@@ -138,19 +138,6 @@ def Stratified(table):
     empty = [[] for i in range(k)]  # the empty 10-folds
     count = 0
     temp = randomized
-    '''
-    vals = []
-    for item in temp:
-        vals.append(item[0])  # gets the class values of the weight
-
-    for i in range(0, 3):
-        for j in range(len(vals)):
-            if (vals[j] == i):
-                if count == 10:
-                    count = 0
-                empty[count].append(temp[j])
-                count += 1
-    '''
     count = 0
     for row in table:
         if count == 10:
@@ -165,21 +152,22 @@ def Stratified(table):
         training = []
         training = empty[(i+1)%10] + empty[(i+2)%10] + empty[(i+3)%10]+ empty[(i+4)%10]+ empty[(i+5)%10]+ empty[(i+6)%10]+ empty[(i+7)%10]+ empty[(i+8)%10]+ empty[(i+9)%10]+ empty[(i+10)%10]
         TP = 0.0
+        atts = [0, 1, 2]
+        final = []
+        final = split_tables(training, atts, final)
+        for row in final:
+            countYes = 0.0
+            countNo = 0.0
+            for token in row:
+                if len(token) < 2:
+                    break
+                if token[3] == 'yes':
+                    countYes += 1.0
+                else:
+                    countNo += 1.0
+            row.append([countYes / (len(row) * 1.0)])
+            row.append([countNo / (len(row) * 1.0)])
         for item in empty[i]:
-            atts = [0, 1, 2]
-            final = []
-            final = split_tables(training, atts, final)
-            for row in final:
-                countYes = 0.0
-                countNo = 0.0
-                for item in row:
-                    if item[3] == 'yes':
-                        countYes += 1.0
-                    else:
-                        countNo += 1.0
-                row.append([countYes / (len(row) * 1.0)])
-                row.append([countNo / (len(row) * 1.0)])
-                #print(row)
             for row in final:
                 if row[0][0] == item[0] and row[0][1] == item[1] and row[0][2] == item[2]:
                     probs = [row[len(row) - 2], row[len(row) - 1]]
@@ -187,13 +175,14 @@ def Stratified(table):
                         prediction = 'yes'
                     else:
                         prediction = 'no'
-                realRank = item[3]
-            print(prediction + ' : ' + realRank)
+            realRank = item[3]
+            #print(prediction + ' : ' + realRank)
             if prediction == realRank:
                 TP += 1.0
-            class_table.append([(prediction), (realRank)])
         accuracy = TP / len(empty[i]) * 1.0
         totalAcc += accuracy
+        print(TP)
+        print(len(empty[i]))
     totalAcc = totalAcc / (k * 1.0)
 
 
