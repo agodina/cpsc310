@@ -179,6 +179,7 @@ def Stratified(table):
             #print(prediction + ' : ' + realRank)
             if prediction == realRank:
                 TP += 1.0
+            class_table.append([(prediction), (realRank)])
         accuracy = TP / len(empty[i]) * 1.0
         totalAcc += accuracy
         print(TP)
@@ -189,6 +190,53 @@ def Stratified(table):
     print ('Stratified 10-Fold Cross Validation')
     print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
     return class_table
+
+def sum_row(row):
+    # prints the sum of the rows without the first column
+    return sum([row[i + 1] for i in range(len(row) - 1)])
+
+def add_sum_col(table):
+    #calculates total for tabulate data
+    for row in table:
+        row.append(sum_row(row))
+    return table
+
+def titanic_confussion(table):
+    # initializes the table
+    confusion_table = [['Yes'], ['No']]
+    for row in confusion_table:
+        for i in range(2):
+            row.append(0)
+    #fill in table with prediction vs actual
+    for row in table:
+        actual = row[0]
+        pred = row[1]
+        if actual == 'yes' and pred == 'yes':
+            confusion_table[0][1]+=1
+        if actual == 'yes' and pred == 'no':
+            confusion_table[0][2] += 1
+        if actual == 'no' and pred == 'yes':
+            confusion_table[1][1] += 1
+        if actual == 'no' and pred == 'no':
+            confusion_table[1][2] += 1
+
+    #adds totals column
+    add_sum_col(confusion_table)
+
+    #adds recognition column
+    i = 1
+    for row in confusion_table:
+        x = confusion_table[i-1][i]
+        if x ==0 or row[3] == 0:
+            row.append(0)
+        else:
+            reg = 100 * float(x)/float(row[3])
+            row.append(reg)
+        i += 1
+    print ('===================================================================================')
+    print ('Titanic: Confusion Matrices')
+    print ('===================================================================================')
+    print (tabulate(confusion_table, headers=["Survived", "Yes", "No" "Total", "Recognition(%)"]))
 
 def main():
     tableMaster = read_csv('titanic.txt')
@@ -215,7 +263,8 @@ def main():
             else:
                 print('died')
 
-    Stratified(tableMaster)
+    x = Stratified(tableMaster)
+    titanic_confussion(x)
 
 if __name__ == '__main__':
     main()
