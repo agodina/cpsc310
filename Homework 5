@@ -75,6 +75,19 @@ def calc_enew(instances, att_index, class_index):
         E_D_j = -sum([p * log(p, 2) for p in probs])
         E_new += (D_j / D) * E_D_j
     return E_new
+    
+def group_by(table, atts, att_index):
+    # create unique list of grouping values
+    grouping_values = list(set(get_column(table, att_index)))
+    # create list of n empty partitions
+    result = []
+    for val in grouping_values:
+        result.append([])
+    # add rows to each partition
+    for row in table:
+        result[grouping_values.index(row[att_index])].append(row[:])
+        
+    return result
 
 def get_best_index(table, indexes):
     e_news = []
