@@ -1,0 +1,45 @@
+def NB_Stratified_G(table):
+    randomized = table[:]  # this will randomize the table we passed in
+    n = len(table)
+    for i in range(n):
+        j = randint(0, n - 1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]  # changes all the positions of the item in the list
+
+    k = 10
+    empty = [[] for i in range(k)]  # the empty 10-folds
+    count = 0
+    temp = randomized
+    vals = []
+    for item in temp:
+        vals.append(weight_class(item[4]))  # gets the class values of the weight
+
+    for i in range(1, 6):
+        for j in range(len(vals)):
+            if (vals[j] == i):
+                if count == 10:
+                    count = 0
+                empty[count].append(temp[j])
+                count += 1
+    class_table = []
+    totalAcc = 0
+
+    for i in range(0, k):
+        training = []
+        training = empty[(i+1)%10] + empty[(i+2)%10] + empty[(i+3)%10]+ empty[(i+4)%10]+ empty[(i+5)%10]+ empty[(i+6)%10]+ empty[(i+7)%10]+ empty[(i+8)%10]+ empty[(i+9)%10]+ empty[(i+10)%10]
+        TP = 0.0
+        for item in empty[i]:
+            probs = [-2]
+            for j in range(1, 11):
+                probs.append(get_prob_cont(j, training, item))
+            prediction = probs.index(max(probs))
+            realRank = DOE_class(float(item[0]))
+            if prediction == realRank:
+                TP += 1.0
+            class_table.append([(prediction), (realRank)])
+        accuracy = TP / len(empty[i]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+
+    print ('Stratified 10-Fold Cross Validation')
+    print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
+    return class_table
