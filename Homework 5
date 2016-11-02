@@ -76,16 +76,25 @@ def calc_enew(instances, att_index, class_index):
         E_new += (D_j / D) * E_D_j
     return E_new
 
+def get_best_index(table, indexes):
+    e_news = []
+    for att in indexes:
+        e_start = calc_estart(table, 3)
+        e_new = calc_enew(table, att, 3)
+        e_news.append(e_start - e_new)
+    print(e_news.index((max(e_news))))
+    return e_news.index((max(e_news)))
+
+
 '''def info_gain(instances, att_index, class_index):
     e_start = calc_estart(instances, att_index)'''
-    
 
 
 def main():
     tableMaster = read_csv('titanic.txt')
 
     print calc_estart(tableMaster, 3)
-
+    get_best_index(tableMaster, [0, 1, 2])
 
 
 if __name__ == '__main__':
