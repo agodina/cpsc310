@@ -201,7 +201,7 @@ def add_sum_col(table):
         row.append(sum_row(row))
     return table
 
-def titanic_confussion(table):
+def titanic_confusion(table):
     # initializes the table
     confusion_table = [['Yes'], ['No']]
     for row in confusion_table:
@@ -264,7 +264,7 @@ def main():
                 print('died')
 
     x = Stratified(tableMaster)
-    titanic_confussion(x)
+    titanic_confusion(x)
 
 if __name__ == '__main__':
     main()
