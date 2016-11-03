@@ -1,0 +1,11 @@
+def rules(table):
+    rules = []
+    for row in table:
+        probs = [row[len(row) - 2], row[len(row) - 1]]
+        if probs[0] > probs[1]:
+            status = 'survived'
+        else:
+            status = 'died'
+        print('If class = ' + row[0][0] + ' and age = ' + row[0][1] + ' and sex = ' + row[0][2] + ' then they ' + status)
+        rule = ['If class = ' + row[0][0], ' and age = ' + row[0][1], ' and sex = ' + row[0][2], ' then they ' + status]
+        rules.append(rule)
