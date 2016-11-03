@@ -1,0 +1,13 @@
+def file_to_list(filename):
+    #Puts the file into a 2D list
+    table = []
+    f = open(filename, 'r')
+    for row in f:
+        my_list = re.split(',|\n', row)
+        good = True
+        for token in my_list: #removes any row with missing values
+            if token == 'NA':
+                good = False
+        if good:
+            table.append(my_list)
+    return table
