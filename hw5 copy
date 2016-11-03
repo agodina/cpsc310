@@ -1,4 +1,3 @@
-
 import csv
 from random import randint
 from tabulate import tabulate
@@ -463,6 +462,27 @@ def auto_Stratified(table):
     print ('Stratified 10-Fold Cross Validation')
     print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
     return class_table
+
+def rules(table):
+    rules = []
+    for row in table:
+        probs = [row[len(row) - 2], row[len(row) - 1]]
+        if probs[0] > probs[1]:
+            status = 'survived'
+        else:
+            status = 'died'
+        print('If class = ' + row[0][0] + ' and age = ' + row[0][1] + ' and sex = ' + row[0][2] + ' then they ' + status)
+        rule = ['If class = ' + row[0][0], ' and age = ' + row[0][1], ' and sex = ' + row[0][2], ' then they ' + status]
+        rules.append(rule)
+
+def rules2(table):
+    rules = []
+    for row in table:
+        probs = row[len(row)-1]
+        print('If cylinder = ' + str(row[0][1]) + ' and weight = ' + str(row[0][4]) + ' and model year = ' + str(row[0][6]) + ' then the mpg rating ' + str(probs))
+        rule = ['If cylinder = ' + str(row[0][1]), ' and weight = ' + str(row[0][4]), ' and model year = ' + str(row[0][6]), ' then the mpg rating ' + str(probs)]
+        rules.append(rule)
+
 def main():
     tableMaster = read_csv('titanic.txt')
     master = file_to_list('prof-auto-data.txt')
@@ -474,6 +494,8 @@ def main():
     print('Titanic Data:')
     print ('')
     final = split_tables(tableMaster, atts, final)
+
+
     x = Stratified(tableMaster)
     titanic_confussion(x)
     print('')
@@ -481,8 +503,18 @@ def main():
     atts2 = [1, 4, 6]
     car =[]
     car = split_tables2(masterTable, atts2, car)
+    for row in car:
+        val = frequencies(row, 0)
+        x = return_class(val)
+        row.append(val[0][x])
     i = auto_Stratified(masterTable)
     auto_confusion(i)
+    print('')
+    print('Rules for Titanic data:')
+    rules(final)
+    print('')
+    print('Rules for Auto data:')
+    rules2(car)
 
 
 if __name__ == '__main__':
