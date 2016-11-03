@@ -120,8 +120,103 @@ def split_tables(table, atts, final):
         split_tables(item, this_atts, final)
     return final
 
+def DOE_class(mpg):
+    mpg = float(mpg)
+    guessRank = -1
+    if mpg >= 45.0:
+        guessRank = 10
+    if  mpg < 45.0 and mpg >= 37.0:
+        guessRank = 9
+    if mpg < 37.0 and mpg >= 31.0:
+        guessRank = 8
+    if mpg < 31.0 and mpg >= 27.0:
+        guessRank = 7
+    if mpg < 27.0 and mpg >= 24.0:
+        guessRank = 6
+    if mpg < 24.0 and mpg >= 20.0:
+        guessRank = 5
+    if mpg < 20.0 and mpg >= 17.0:
+        guessRank = 4
+    if mpg < 17.0 and mpg >= 15.0:
+        guessRank = 3
+    if mpg < 15.0 and mpg >= 13.0:
+        guessRank = 2
+    if mpg < 13.0:
+        guessRank = 1
+    return guessRank
+
+
+def weight_class(weight):
+    weight = int(weight)
+    guessWeight = -1
+    if weight >= 3500:
+        guessWeight = 5
+    if weight <= 3499 and weight >= 3000:
+        guessWeight = 4
+    if weight <= 2999 and weight >= 2500:
+        guessWeight = 3
+    if weight <= 2499 and weight >= 2000:
+        guessWeight = 2
+    if weight <= 1999:
+        guessWeight = 1
+    return guessWeight
+
+
+def weight_stratified (table):
+    randomized = table[:]  # this will randomize the table we passed in
+    n = len(table)
+    for i in range(n):
+        j = randint(0, n - 1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]  # changes all the positions of the item in the list
+
+    k = 10
+    empty = [[] for i in range(k)]  # the empty 10-folds
+    count = 0
+    temp = randomized
+    vals = []
+    for item in temp:
+        vals.append(weight_class(item[4]))  # gets the class values of the weight
+
+    for i in range(1, 6):
+        for j in range(len(vals)):
+            if (vals[j] == i):
+                if count == 10:
+                    count = 0
+                empty[count].append(temp[j])
+                count += 1
+    return empty
+
+
+def estart_car(instances, index):
+    empty = []
+    count = 0.0
+    for i in range(1,10):
+        for spot in instances:
+            if spot[index] == i:
+                count +=1
+        empty.append(count)
+        count =0.0
+
+    e_start = 0.0
+    size = (len(instances))
+    for j in empty:
+        e_start += -((j/size) * log((j/size),2))
+    return e_start
+
+
+def change_mpg(instances, att_index):
+
+    for row in instances:
+        row[att_index] = DOE_class(row[att_index])
+    return instances
+
+
 def main():
-     tableMaster = read_csv('titanic.txt')
+    tableMaster = read_csv('titanic.txt')
+    master = file_to_list('prof-auto-data.txt')
+    masterTable = change_mpg(master, 0)
+    
+    tableMaster = read_csv('titanic.txt')
     atts = [0, 1, 2]
     final = []
     final = split_tables(tableMaster, atts, final)
