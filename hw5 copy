@@ -1,4 +1,4 @@
-  import csv
+import csv
 from random import randint
 from tabulate import tabulate
 from math import log
@@ -358,23 +358,30 @@ def estart_car(instances, index):
         count =0.0
 
     e_start = 0.0
-    size = (len(instances))
+    size = float(len(instances))
     for j in empty:
-        e_start += -((j/size) * log((j/size),2))
+        if j == 0.0:
+            break
+        else:
+            e_start += -((j/size) * log((j/size),2))
     return e_start
 
 
 def change_mpg(instances, att_index):
-
-    for row in instances:
-        row[att_index] = DOE_class(row[att_index])
+    if att_index == 0:
+        for row in instances:
+            row[att_index] = DOE_class(row[att_index])
+    else:
+        for row in instances:
+            row[att_index] = weight_class(row[att_index])
     return instances
 
 
 def main():
     tableMaster = read_csv('titanic.txt')
     master = file_to_list('prof-auto-data.txt')
-    masterTable = change_mpg(master, 0)
+    masterTable1 = change_mpg(master, 0)
+    masterTable = change_mpg(masterTable1, 4)
     print estart_car(master,0)
     print calc_enew(masterTable, 1, 0)
     print calc_enew(masterTable, 4, 0)
@@ -397,6 +404,11 @@ def main():
     atts2 = [1, 4, 6]
     car =[]
     car = split_tables2(masterTable, atts2, car)
+    print('')
+    print frequencies(car[4],0)
+
+    for row in car:
+        print row
 
 
 
