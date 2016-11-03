@@ -1,0 +1,404 @@
+  import csv
+from random import randint
+from tabulate import tabulate
+from math import log
+import re
+from graphviz import Digraph
+
+def read_csv(filename):
+    the_file = open(filename, 'r')  # opens the file
+    the_reader = csv.reader(the_file, dialect='excel')
+    table = []  # makes an empty table
+    for row in the_reader:
+        if len(row) > 0:
+            table.append(row)  # adds each row to the table
+    the_file.close()  # closes the file
+    return table  # returns the new table
+
+def file_to_list(filename):
+    #Puts the file into a 2D list
+    table = []
+    f = open(filename, 'r')
+    for row in f:
+        my_list = re.split(',|\n', row)
+        good = True
+        for token in my_list: #removes any row with missing values
+            if token == 'NA':
+                good = False
+        if good:
+            table.append(my_list)
+    return table
+
+def get_column(table, index):
+    column = []  # creates a new table
+    for row in table:
+        column.append(row[index])
+    return column
+
+
+def partition_instances(instances, att_index, att_domain):
+    temp = [[], []]
+
+    for row in instances:
+        if row[att_index] == att_domain:
+            temp[0].append(row)
+        else:
+            temp[1].append(row)
+    return temp
+
+
+def attribute_frequencies(instances, att_index, class_index):
+    # get unique list of attribute and class values
+    att_vals = list(set(get_column(instances, att_index)))
+    class_vals = list(set(get_column(instances, class_index)))
+    # initialize the result
+    result = {v: [{c: 0 for c in class_vals}, 0] for v in att_vals}  # build up the frequencies
+    for row in instances:
+        label = row[class_index]
+        att_val = row[att_index]
+        result[att_val][0][label] += 1
+        result[att_val][1] += 1
+    return result
+
+
+def calc_estart(instances, att_index):
+    size = len(instances)
+    Yes = 0.0
+    No = 0.0
+
+    for row in instances:
+        if row[att_index] == 'yes':
+            Yes += 1
+        else:
+            No += 1
+
+    p, q = Yes / size, No / size
+    e_start = -(p * log(p, 2)) - (q * log(q, 2))
+
+    return e_start
+
+def calc_enew(instances, att_index, class_index):
+    # get the length of the partition
+    D = len(instances)
+    # calculate the partition stats for att_index (see below)
+    freqs = attribute_frequencies(instances, att_index, class_index)
+    # find E_new from freqs (calc weighted avg)
+    E_new = 0
+    for att_val in freqs:
+        D_j = float(freqs[att_val][1])
+        probs = []
+        for (_, c) in freqs[att_val][0].items():
+            if c != 0:
+                probs.append(c / D_j)
+        #probs = [(c / D_j) for (_, c) in freqs[att_val][0].items()]
+        E_D_j = -sum([p * log(p, 2) for p in probs])
+        E_new += (D_j / D) * E_D_j
+    return E_new
+
+def get_likihood_part(table, instance):
+    count = 0.0
+    for item in table:
+        if item == instance:
+            count += 1.0
+    return (count / (len(table) * 1.0))
+
+
+def group_by(table, att_index):
+    # create unique list of grouping values
+    grouping_values = list(set(get_column(table, att_index)))
+    # create list of n empty partitions
+    result = []
+    for val in grouping_values:
+        result.append([])
+    # add rows to each partition
+    for row in table:
+        result[grouping_values.index(row[att_index])].append(row[:])
+    return result
+
+def get_best_index(table, indexes):
+    e_news = []
+    for att in indexes:
+        e_start = calc_estart(table, 3)
+        e_new = calc_enew(table, att, 3)
+        e_news.append(e_start - e_new)
+    return indexes[e_news.index(max(e_news))]
+
+def get_best_index2(table, indexes):
+    e_news = []
+    for att in indexes:
+        e_start = estart_car(table, 0)
+        e_new = calc_enew(table, att, 0)
+        e_news.append(e_start - e_new)
+    return indexes[e_news.index(max(e_news))]
+
+def split_tables(table, atts, final):
+    if len(atts) < 1:
+        return
+    this_atts = atts[:]
+    best = get_best_index(table, this_atts)
+    this_atts.remove(best)
+    grouped = group_by(table, best)
+    for item in grouped:
+        if len(atts) == 1: #this checks if it will be a leaf
+            final.append(item)
+    for item in grouped:
+        split_tables(item, this_atts, final)
+    return final
+
+def split_tables2(table, atts, final):
+    if len(atts) < 1:
+        return
+    this_atts = atts[:]
+    best = get_best_index2(table, this_atts)
+    this_atts.remove(best)
+    grouped = group_by(table, best)
+    for item in grouped:
+        if len(atts) == 1: #this checks if it will be a leaf
+            final.append(item)
+    for item in grouped:
+        split_tables2(item, this_atts, final)
+    return final
+
+def Stratified(table):
+    randomized = table[:]  # this will randomize the table we passed in
+    n = len(table)
+    for i in range(n):
+        j = randint(0, n - 1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]  # changes all the positions of the item in the list
+
+    k = 10
+    empty = [[] for i in range(k)]  # the empty 10-folds
+    count = 0
+    temp = randomized
+    count = 0
+    for row in table:
+        if count == 10:
+            count = 0
+        empty[count].append(row)
+        count += 1
+
+    class_table = []
+    totalAcc = 0
+
+    for i in range(0, k):
+        training = []
+        training = empty[(i+1)%10] + empty[(i+2)%10] + empty[(i+3)%10]+ empty[(i+4)%10]+ empty[(i+5)%10]+ empty[(i+6)%10]+ empty[(i+7)%10]+ empty[(i+8)%10]+ empty[(i+9)%10]+ empty[(i+10)%10]
+        TP = 0.0
+        atts = [0, 1, 2]
+        final = []
+        final = split_tables(training, atts, final)
+        for row in final:
+            countYes = 0.0
+            countNo = 0.0
+            for token in row:
+                if len(token) < 2:
+                    break
+                if token[3] == 'yes':
+                    countYes += 1.0
+                else:
+                    countNo += 1.0
+            row.append([countYes / (len(row) * 1.0)])
+            row.append([countNo / (len(row) * 1.0)])
+        for item in empty[i]:
+            for row in final:
+                if row[0][0] == item[0] and row[0][1] == item[1] and row[0][2] == item[2]:
+                    probs = [row[len(row) - 2], row[len(row) - 1]]
+                    if probs[0] > probs[1]:
+                        prediction = 'yes'
+                    else:
+                        prediction = 'no'
+            realRank = item[3]
+            #print(prediction + ' : ' + realRank)
+            if prediction == realRank:
+                TP += 1.0
+            class_table.append([(prediction), (realRank)])
+        accuracy = TP / len(empty[i]) * 1.0
+        totalAcc += accuracy
+    totalAcc = totalAcc / (k * 1.0)
+
+
+    print ('Stratified 10-Fold Cross Validation')
+    print('Accuracy: ' + str(totalAcc) + ', Error Rate: ' + str(1 - totalAcc))
+    return class_table
+
+def sum_row(row):
+    # prints the sum of the rows without the first column
+    return sum([row[i + 1] for i in range(len(row) - 1)])
+
+def add_sum_col(table):
+    #calculates total for tabulate data
+    for row in table:
+        row.append(sum_row(row))
+    return table
+
+def titanic_confussion(table):
+    # initializes the table
+    confusion_table = [['Yes'], ['No']]
+    for row in confusion_table:
+        for i in range(2):
+            row.append(0)
+    #fill in table with prediction vs actual
+    for row in table:
+        actual = row[0]
+        pred = row[1]
+        if actual == 'yes' and pred == 'yes':
+            confusion_table[0][1]+=1
+        if actual == 'yes' and pred == 'no':
+            confusion_table[0][2] += 1
+        if actual == 'no' and pred == 'yes':
+            confusion_table[1][1] += 1
+        if actual == 'no' and pred == 'no':
+            confusion_table[1][2] += 1
+
+    #adds totals column
+    add_sum_col(confusion_table)
+
+    #adds recognition column
+    i = 1
+    for row in confusion_table:
+        x = confusion_table[i-1][i]
+        if x ==0 or row[3] == 0:
+            row.append(0)
+        else:
+            reg = 100 * float(x)/float(row[3])
+            row.append(reg)
+        i += 1
+    print ('===================================================================================')
+    print ('Titanic: Confusion Matrices')
+    print ('===================================================================================')
+    print (tabulate(confusion_table, headers=["Survived", "Yes", "No" "Total", "Recognition(%)"]))
+
+
+def frequencies(table, index):
+    """Returns a unique, sorted list of values in xs and occurrence counts for each value"""
+    xs = sorted(get_column(table, index))
+    values, counts = [], []
+    for x in xs:
+        if x not in values:
+            values.append(x)
+            counts.append(1)
+        else:
+            counts[-1] += 1
+    return values, counts
+def DOE_class(mpg):
+    mpg = float(mpg)
+    guessRank = -1
+    if mpg >= 45.0:
+        guessRank = 10
+    if  mpg < 45.0 and mpg >= 37.0:
+        guessRank = 9
+    if mpg < 37.0 and mpg >= 31.0:
+        guessRank = 8
+    if mpg < 31.0 and mpg >= 27.0:
+        guessRank = 7
+    if mpg < 27.0 and mpg >= 24.0:
+        guessRank = 6
+    if mpg < 24.0 and mpg >= 20.0:
+        guessRank = 5
+    if mpg < 20.0 and mpg >= 17.0:
+        guessRank = 4
+    if mpg < 17.0 and mpg >= 15.0:
+        guessRank = 3
+    if mpg < 15.0 and mpg >= 13.0:
+        guessRank = 2
+    if mpg < 13.0:
+        guessRank = 1
+    return guessRank
+
+
+def weight_class(weight):
+    weight = int(weight)
+    guessWeight = -1
+    if weight >= 3500:
+        guessWeight = 5
+    if weight <= 3499 and weight >= 3000:
+        guessWeight = 4
+    if weight <= 2999 and weight >= 2500:
+        guessWeight = 3
+    if weight <= 2499 and weight >= 2000:
+        guessWeight = 2
+    if weight <= 1999:
+        guessWeight = 1
+    return guessWeight
+
+
+def weight_stratified (table):
+    randomized = table[:]  # this will randomize the table we passed in
+    n = len(table)
+    for i in range(n):
+        j = randint(0, n - 1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]  # changes all the positions of the item in the list
+
+    k = 10
+    empty = [[] for i in range(k)]  # the empty 10-folds
+    count = 0
+    temp = randomized
+    vals = []
+    for item in temp:
+        vals.append(weight_class(item[4]))  # gets the class values of the weight
+
+    for i in range(1, 6):
+        for j in range(len(vals)):
+            if (vals[j] == i):
+                if count == 10:
+                    count = 0
+                empty[count].append(temp[j])
+                count += 1
+    return empty
+
+
+def estart_car(instances, index):
+    empty = []
+    count = 0.0
+    for i in range(1,10):
+        for spot in instances:
+            if spot[index] == i:
+                count +=1
+        empty.append(count)
+        count =0.0
+
+    e_start = 0.0
+    size = (len(instances))
+    for j in empty:
+        e_start += -((j/size) * log((j/size),2))
+    return e_start
+
+
+def change_mpg(instances, att_index):
+
+    for row in instances:
+        row[att_index] = DOE_class(row[att_index])
+    return instances
+
+
+def main():
+    tableMaster = read_csv('titanic.txt')
+    master = file_to_list('prof-auto-data.txt')
+    masterTable = change_mpg(master, 0)
+    print estart_car(master,0)
+    print calc_enew(masterTable, 1, 0)
+    print calc_enew(masterTable, 4, 0)
+    print calc_enew(masterTable,6, 0)
+    atts = [0, 1, 2]
+    final = []
+    final = split_tables(tableMaster, atts, final)
+    for row in final:
+        countYes = 0.0
+        countNo = 0.0
+        for item in row:
+            if item[3] == 'yes':
+                countYes += 1.0
+            else:
+                countNo += 1.0
+        row.append([countYes/((len(row)) * 1.0)])
+        row.append([countNo/((len(row)-1) * 1.0)])
+    #x = Stratified(tableMaster)
+    #titanic_confussion(x)
+    atts2 = [1, 4, 6]
+    car =[]
+    car = split_tables2(masterTable, atts2, car)
+
+
+
+if __name__ == '__main__':
+    main()
