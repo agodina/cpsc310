@@ -2,54 +2,22 @@ from random import randint
 import csv
 from matplotlib import *
 
+def Stratified(table):
+    randomized = table[:]  # this will randomize the table we passed in
+    n = len(table)
+    for i in range(n):
+        j = randint(0, n - 1)
+        randomized[i], randomized[j] = randomized[j], randomized[i]  # changes all the positions of the item in the list
 
-def read_csv(filename):
-    the_file = open(filename, 'r')  # opens the file
-    the_reader = csv.reader(the_file, dialect='excel')
-    table = []  # makes an empty table
-    for row in the_reader:
-        if len(row) > 0:
-            table.append(row)  # adds each row to the table
-    the_file.close()  # closes the file
-    return table  # returns the new table
-
-
-def file_to_list(filename):
-    # Puts the file into a 2D list
-    table = []
-    f = open(filename, 'r')
-    for row in f:
-        my_list = re.split(',|\n', row)
-        good = True
-        for token in my_list: #removes any row with missing values
-            if token == 'NA':
-                good = False
-        if good:
-            table.append(my_list)
-    return table
-
-def bootstrap(table):
-    return [table[randint(0, len(table) - 1)] for i in table]
-
-
-def rand_stratified(table):
-    temp = bootstrap(table)
-    length = len(temp)
-    n0 = (length * 2)/3
-    return temp[0:n0],  temp[n0:]
-
-def bootstrap_n(table):
-    temp = rand_stratified(table)
-    training_set = temp[0]
-    test_set = temp[1]
-
-    tester = rand_stratified(training_set)
-
-
-def main():
-    print "hello"
-    tableMaster = read_csv('titanic.txt')
-    print len(rand_stratified(tableMaster)[1])
-
-
-if __name__ == '__main__':
+    k = 3
+    empty = [[] for i in range(k)]  # the empty 10-folds
+    count = 0
+    temp = randomized
+    count = 0
+    for row in table:
+        if count == k:
+            count = 0
+        empty[count].append(row)
+        count += 1
+    training_set = empty[0] + empty[1]
+    return len(training_set), len(empty[2])
