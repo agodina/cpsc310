@@ -154,16 +154,16 @@ def get_forest(table, N):
             row.append([countYes / (len(row) * 1.0)])
             row.append([countNo / (len(row) * 1.0)])
         for item in NTrainingAndTest[1]:
-            print(item)
             for row in final:
-                print(row)
+                prediction = 'yes' # the default is no
                 for instance in row:
-                    if instance[0] == instance[0] and row[1] == instance[1] and instance[2] == item[2]:
-                        probs = [row[len(row) - 2], row[len(row) - 1]]
-                        if probs[0] > probs[1]:
-                            prediction = 'yes'
-                        else:
-                            prediction = 'no'
+                    if len(instance) > 2:
+                        if instance[0] == item[0] and instance[1] == item[1] and instance[2] == item[2]:
+                            probs = [row[len(row) - 2], row[len(row) - 1]]
+                            if probs[0] > probs[1]:
+                                prediction = 'yes'
+                            else:
+                                prediction = 'no'
             realRank = item[3]
             # print(prediction + ' : ' + realRank)
             if prediction == realRank:
@@ -178,8 +178,6 @@ def main():
     firstTrainingAndTest = Stratified(tableMaster)
     final = []
     final = split_tables(firstTrainingAndTest[1], [0, 1, 2], final)
-    for item in final:
-        print(item)
     print('')
     get_forest(firstTrainingAndTest[1], 3)
 
