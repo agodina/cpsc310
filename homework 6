@@ -3,6 +3,8 @@ import random
 from random import randint
 from tabulate import tabulate
 from math import log
+from collections import Counter
+
 
 def read_csv(filename):
     the_file = open(filename, 'r')  # opens the file
@@ -112,7 +114,19 @@ def split_tables(table, atts, final):
         split_tables(item, this_atts, final)
     return final
 
-
+def split_best_tables(table, atts, final):
+    if len(atts) < 1:
+        return
+    this_atts = atts[:]
+    best = get_best_index(table, this_atts)
+    this_atts.remove(best)
+    grouped = group_by(table, best)
+    for item in grouped:
+        if len(atts) == 1: #this checks if it will be a leaf
+            final.append(item)
+    for item in grouped:
+        split_best_tables(item, this_atts, final)
+    return final
 
 def Stratified(table):
     randomized = table[:]  # this will randomize the table we passed in
@@ -135,22 +149,27 @@ def Stratified(table):
     return [training_set, empty[2]]
 
 def get_forest(table, N):
-    totalAcc = 0.0
-    for i in range(0, N):
+    forrest = []
+    class_tables = []
+    for i in range(0, N): #this loop holds the creation of the tree
+        class_table = []
+        totalAcc = 0.0
         TP = 0.0
-        NTrainingAndTest = Stratified(table)
+        NTrainingAndTest = Stratified(table) #split up the table 2:1
         final = []
-        final = split_tables(NTrainingAndTest[0], [0, 1, 2], final)
+        if N == 1:
+            final = split_best_tables(NTrainingAndTest[0], [0, 1, 2], final)  # produces a decision treee
+        else:
+            final = split_tables(NTrainingAndTest[0], [0, 1, 2], final) #produces a decision treee
         for row in final:
             countYes = 0.0
             countNo = 0.0
             for token in row:
-                if len(token) < 2:
-                    break
-                if token[3] == 'yes':
-                    countYes += 1.0
-                else:
-                    countNo += 1.0
+                if len(token) > 2:
+                    if token[3] == 'yes':
+                        countYes += 1.0
+                    else:
+                        countNo += 1.0
             row.append([countYes / (len(row) * 1.0)])
             row.append([countNo / (len(row) * 1.0)])
         for item in NTrainingAndTest[1]:
@@ -168,19 +187,74 @@ def get_forest(table, N):
             # print(prediction + ' : ' + realRank)
             if prediction == realRank:
                 TP += 1.0
+            class_table.append([(prediction), (realRank)])
         accuracy = TP / len(NTrainingAndTest[1]) * 1.0
         totalAcc += accuracy
-        print(TP)
-        print(len(NTrainingAndTest[1]))
+        #print(TP)
+        #print(totalAcc)
+        #print(len(NTrainingAndTest[1]))
+        final.append([totalAcc])
+        forrest.append(final)
+        class_tables.append(class_table)
+    return forrest, class_tables
+
+def get_key(item):
+    return item[len(item) - 1][0]
+
+def get_top_trees(forrest, M):
+    od_forrest = sorted(forrest, key=get_key, reverse=True)
+    return od_forrest[0:M]
+
+def make_predict(forrest, test):
+    predictions = []
+    accuracy = 0.0
+    TP = 0.0
+    for item in test:
+        for tree in forrest:
+            for row in tree:
+                prediction = 'yes'  # the default is no
+                if len(row) > 2:
+                    for instance in row:
+                        if len(instance) > 2:
+                            if instance[0] == item[0] and instance[1] == item[1] and instance[2] == item[2]:
+                                probs = [row[len(row) - 2], row[len(row) - 1]]
+                                if probs[0] > probs[1]:
+                                    prediction = 'yes'
+                                else:
+                                    prediction = 'no'
+            # print(prediction + ' : ' + realRank)
+            predictions.append(prediction)
+        data = Counter(predictions)
+        #data.most_common()  # Returns all unique items and their counts
+        #print(data.most_common(1)[0][0])  # Returns the highest occurring item
+        if data.most_common(1)[0][0] == item[3]:
+            TP += 1.0
+    accuracy = TP / len(test) * 1.0
+    return accuracy
+
+def step_2(table):
+    firstTrainingAndTest = Stratified(table)
+    forrest = get_forest(firstTrainingAndTest[1], 20)
+    top_forrest = get_top_trees(forrest[0], 7)
+    acc = make_predict(top_forrest, firstTrainingAndTest[1])
+    print('Accuracy of forrest: ' + str(acc))
+
+    normal = get_forest(firstTrainingAndTest[1], 1)
+    acc = make_predict(normal[0], firstTrainingAndTest[1])
+    print('Accuracy of normal tree: ' + str(acc))
 
 def main():
     tableMaster = read_csv('titanic.txt')
+    ''''
     firstTrainingAndTest = Stratified(tableMaster)
     final = []
-    final = split_tables(firstTrainingAndTest[1], [0, 1, 2], final)
+    final = split_tables(firstTrainingAndTest[0], [0, 1, 2], final)
     print('')
-    get_forest(firstTrainingAndTest[1], 3)
-
+    forrest = get_forest(firstTrainingAndTest[1], 3)
+    top_forrest = get_top_trees(forrest, 2)
+    make_predict(top_forrest, firstTrainingAndTest[1])
+    '''
+    step_2(tableMaster)
 
 
 if __name__ == '__main__':
