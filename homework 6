@@ -837,7 +837,7 @@ def step_3(table): #N = 10, M = 5, F = 2
     print('N = 10, M = 5, F = 2')
     print('Titanic Data:')
     firstTrainingAndTest = Stratified(table)
-    forrest = get_forest(firstTrainingAndTest[0], 70)
+    forrest = get_forest(firstTrainingAndTest[0], 10)
     top_forrest = get_top_trees(forrest[0], 5)
     acc = make_predict(top_forrest, firstTrainingAndTest[1])
     print('Accuracy of forrest: ' + str(acc[0]))
@@ -852,7 +852,7 @@ def step_3(table): #N = 10, M = 5, F = 2
     masterTable = change_mpg(masterTable1, 4)
     firstTrainingAndTest = Stratified(masterTable)
 
-    forrest2 = get_auto_forest(firstTrainingAndTest[0], 100)
+    forrest2 = get_auto_forest(firstTrainingAndTest[0], 10)
     top_forrest = get_top_trees(forrest2[0], 5)
     acc = auto_make_predict(top_forrest, firstTrainingAndTest[1])
     print('Accuracy of forrest for auto: ' + str(acc[0]))
