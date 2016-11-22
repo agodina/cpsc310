@@ -378,6 +378,7 @@ def get_top_trees(forrest, M):
 
 def make_predict(forrest, test):
     predictions = []
+    class_table = []
     accuracy = 0.0
     TP = 0.0
     for item in test:
@@ -390,12 +391,13 @@ def make_predict(forrest, test):
                 prediction = 'no'
             predictions.append(prediction)
         data = Counter(predictions)
+        class_table.append([(prediction),(item[3])])
         #data.most_common()  # Returns all unique items and their counts
         #print(data.most_common(1)[0][0])  # Returns the highest occurring item
         if data.most_common(1)[0][0] == item[3]:
             TP += 1.0
     accuracy = TP / len(test) * 1.0
-    return accuracy
+    return accuracy, class_table
 
 def auto_make_predict(forrest, test):
     predictions = []
@@ -416,8 +418,9 @@ def auto_make_predict(forrest, test):
         #print(data.most_common(1)[0][0])  # Returns the highest occurring item
         if data.most_common(1)[0][0] == item[0]:
             TP += 1.0
+        class_table.append([(data.most_common(1)[0][0]), (realRank)])
     accuracy = TP / len(test) * 1.0
-    return accuracy
+    return accuracy, class_table
 
 def wisc_make_predict(forrest, test):
     predictions = []
@@ -436,13 +439,13 @@ def wisc_make_predict(forrest, test):
             realRank = item[9]
         if prediction == realRank:
             TP += 1.0
-        class_table.append([(prediction), (realRank)])
-        predictions.append(prediction)
         data = Counter(predictions)
         #data.most_common()  # Returns all unique items and their counts
         #print(data.most_common(1)[0][0])  # Returns the highest occurring item
         if data.most_common(1)[0][0] == int(item[9]):
             TP += 1.0
+        class_table.append([(data.most_common(1)[0][0]), (realRank)])
+
     accuracy = TP / len(test) * 1.0
     return accuracy
 
@@ -559,8 +562,8 @@ def auto_confusion(table):
 
     #fill in table with prediction vs actual
     for row in table:
-        actual = row[0]
-        pred = row[1]
+        actual = row[1]
+        pred = row[0]
         confusion_table[actual-1][pred]+= 1
 
     #adds totals column
@@ -692,6 +695,7 @@ def find_wisc_leaf(tree, instance):
     return tree[scores.index(max(scores))]
 
 
+
 def get_wisc_forrest(table, N):
     forrest = []
     class_tables = []
@@ -728,7 +732,7 @@ def get_wisc_forrest(table, N):
             countMal = 0.0
             for token in row:
                 if len(token) > 2:
-                    if token[9] == 2:
+                    if int(token[9]) == 2:
                         countBen += 1.0
                     else:
                         countMal += 1.0
@@ -753,6 +757,43 @@ def get_wisc_forrest(table, N):
         class_tables.append(class_table)
     return forrest, class_tables
 
+def wisconsin_confussion(table):
+    # initializes the table
+    confusion_table = [['Benign'], ['Malignant']]
+    for row in confusion_table:
+        for i in range(2):
+            row.append(0)
+    #fill in table with prediction vs actual
+    for row in table:
+        actual = row[1]
+        pred = row[0]
+        if actual == '2' and pred == '2':
+            confusion_table[0][1]+=1
+        if actual == '2' and pred == '4':
+            confusion_table[0][2] += 1
+        if actual == '4' and pred == '2':
+            confusion_table[1][1] += 1
+        if actual == '4' and pred == '4':
+            confusion_table[1][2] += 1
+
+    #adds totals column
+    add_sum_col(confusion_table)
+
+    #adds recognition column
+    i = 1
+    for row in confusion_table:
+        x = confusion_table[i-1][i]
+        if x ==0 or row[3] == 0:
+            row.append(0)
+        else:
+            reg = 100 * float(x)/float(row[3])
+            row.append(reg)
+        i += 1
+    print ('===================================================================================')
+    print ('Wisconsin: Confusion Matrices')
+    print ('===================================================================================')
+    print (tabulate(confusion_table, headers=["Tumor Type", "Benign", "Malignant" "Total", "Recognition(%)"]))
+
 
 def step_2(table):
     print('N = 7, M = 20, F = 2')
@@ -760,28 +801,35 @@ def step_2(table):
     firstTrainingAndTest = Stratified(table)
 
     forrest = get_forest(firstTrainingAndTest[0], 20)
+    for row in forrest[1]:
+        titanic_confussion(row)
     top_forrest = get_top_trees(forrest[0], 7)
     acc = make_predict(top_forrest, firstTrainingAndTest[1])
-    print('Accuracy of forrest: ' + str(acc))
+    titanic_confussion(acc[1])
+    print('Accuracy of forrest: ' + str(acc[0]))
 
     normal = get_forest(firstTrainingAndTest[1], 1)
-    acc = make_predict(normal[0], firstTrainingAndTest[1])
-    print('Accuracy of normal tree: ' + str(acc))
+    acc2 = make_predict(normal[0], firstTrainingAndTest[1])
+    titanic_confussion(acc[1])
+    print('Accuracy of normal tree: ' + str(acc2[0]))
 
     print('Auto Data:')
     master = file_to_list('prof-auto-data.txt')
     masterTable1 = change_mpg(master, 0)
     masterTable = change_mpg(masterTable1, 4)
     firstTrainingAndTest = Stratified(masterTable)
-
     forrest2 = get_auto_forest(firstTrainingAndTest[0], 20)
+    for row in forrest2[1]:
+        auto_confusion(row)
     top_forrest = get_top_trees(forrest2[0], 7)
     acc = auto_make_predict(top_forrest, firstTrainingAndTest[1])
-    print('Accuracy of forrest for auto: ' + str(acc))
+    auto_confusion(acc[1])
+    print('Accuracy of forrest for auto: ' + str(acc[0]))
 
     normal = get_auto_forest(firstTrainingAndTest[1], 1)
     acc = auto_make_predict(normal[0], firstTrainingAndTest[1])
-    print('Accuracy of normal tree for auto: ' + str(acc))
+    auto_confusion(acc[1])
+    print('Accuracy of normal tree for auto: ' + str(acc[0]))
 
     return forrest[1]
 
@@ -792,11 +840,11 @@ def step_3(table): #N = 10, M = 5, F = 2
     forrest = get_forest(firstTrainingAndTest[0], 10)
     top_forrest = get_top_trees(forrest[0], 5)
     acc = make_predict(top_forrest, firstTrainingAndTest[1])
-    print('Accuracy of forrest: ' + str(acc))
+    print('Accuracy of forrest: ' + str(acc[0]))
 
     normal = get_forest(firstTrainingAndTest[1], 1)
     acc = make_predict(normal[0], firstTrainingAndTest[1])
-    print('Accuracy of normal tree: ' + str(acc))
+    print('Accuracy of normal tree: ' + str(acc[0]))
 
     print('Auto Data:')
     master = file_to_list('prof-auto-data.txt')
@@ -807,12 +855,11 @@ def step_3(table): #N = 10, M = 5, F = 2
     forrest2 = get_auto_forest(firstTrainingAndTest[0], 10)
     top_forrest = get_top_trees(forrest2[0], 5)
     acc = auto_make_predict(top_forrest, firstTrainingAndTest[1])
-    print('Accuracy of forrest for auto: ' + str(acc))
+    print('Accuracy of forrest for auto: ' + str(acc[0]))
 
     normal = get_auto_forest(firstTrainingAndTest[0], 1)
     acc = auto_make_predict(normal[0], firstTrainingAndTest[1])
-    print('Accuracy of normal tree for auto: ' + str(acc))
-
+    print('Accuracy of normal tree for auto: ' + str(acc[0]))
     return forrest[1]
 
 def step_4(table):
@@ -820,6 +867,9 @@ def step_4(table):
     print('Wisc data:')
     firstTrainingAndTest = Stratified(table)
     forrest = get_wisc_forrest(firstTrainingAndTest[0], 3)
+    for row in forrest[1]:
+        wisconsin_confussion(row)
+
     top_forrest = get_top_trees(forrest[0], 2)
     acc = wisc_make_predict(top_forrest, firstTrainingAndTest[1])
     print('Accuracy of forrest for wisc: ' + str(acc))
@@ -835,7 +885,7 @@ def main():
     print('')
     y = step_3(tableMaster)
     print('')
-    wisc = file_to_list('wisconsin.dat.txt')
+    wisc = file_to_list('wisconsin.txt')
     step_4(wisc)
 
 if __name__ == '__main__':
