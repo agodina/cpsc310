@@ -447,7 +447,7 @@ def wisc_make_predict(forrest, test):
         class_table.append([(data.most_common(1)[0][0]), (realRank)])
 
     accuracy = TP / len(test) * 1.0
-    return accuracy
+    return accuracy, class_table
 
 
 def get_best_index2(table, indexes):
@@ -765,15 +765,15 @@ def wisconsin_confussion(table):
             row.append(0)
     #fill in table with prediction vs actual
     for row in table:
-        actual = row[1]
-        pred = row[0]
-        if actual == '2' and pred == '2':
+        actual = int(row[1])
+        pred = int(row[0])
+        if actual == 2 and pred == 2:
             confusion_table[0][1]+=1
-        if actual == '2' and pred == '4':
+        if actual == 2 and pred == 4:
             confusion_table[0][2] += 1
-        if actual == '4' and pred == '2':
+        if actual == 4 and pred == 2:
             confusion_table[1][1] += 1
-        if actual == '4' and pred == '4':
+        if actual == 4 and pred == 4:
             confusion_table[1][2] += 1
 
     #adds totals column
@@ -837,7 +837,7 @@ def step_3(table): #N = 10, M = 5, F = 2
     print('N = 10, M = 5, F = 2')
     print('Titanic Data:')
     firstTrainingAndTest = Stratified(table)
-    forrest = get_forest(firstTrainingAndTest[0], 10)
+    forrest = get_forest(firstTrainingAndTest[0], 70)
     top_forrest = get_top_trees(forrest[0], 5)
     acc = make_predict(top_forrest, firstTrainingAndTest[1])
     print('Accuracy of forrest: ' + str(acc[0]))
@@ -852,7 +852,7 @@ def step_3(table): #N = 10, M = 5, F = 2
     masterTable = change_mpg(masterTable1, 4)
     firstTrainingAndTest = Stratified(masterTable)
 
-    forrest2 = get_auto_forest(firstTrainingAndTest[0], 10)
+    forrest2 = get_auto_forest(firstTrainingAndTest[0], 100)
     top_forrest = get_top_trees(forrest2[0], 5)
     acc = auto_make_predict(top_forrest, firstTrainingAndTest[1])
     print('Accuracy of forrest for auto: ' + str(acc[0]))
@@ -872,21 +872,23 @@ def step_4(table):
 
     top_forrest = get_top_trees(forrest[0], 2)
     acc = wisc_make_predict(top_forrest, firstTrainingAndTest[1])
-    print('Accuracy of forrest for wisc: ' + str(acc))
+    wisconsin_confussion(acc[1])
+    print('Accuracy of forrest for wisc: ' + str(acc[0]))
 
     normal = get_wisc_forrest(firstTrainingAndTest[0], 1)
     acc = wisc_make_predict(normal[0], firstTrainingAndTest[1])
-    print('Accuracy of normal tree for wisc: ' + str(acc))
+    wisconsin_confussion(acc[1])
+    print('Accuracy of normal tree for wisc: ' + str(acc[0]))
 
 
 def main():
     tableMaster = read_csv('titanic.txt')
-    x = step_2(tableMaster)
+    #step_2(tableMaster)
     print('')
-    y = step_3(tableMaster)
+    step_3(tableMaster)
     print('')
     wisc = file_to_list('wisconsin.txt')
-    step_4(wisc)
+    #tep_4(wisc)
 
 if __name__ == '__main__':
     main()
