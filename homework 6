@@ -55,7 +55,6 @@ def calc_estart(instances, att_index):
     size = len(instances)
     Yes = 0.0
     No = 0.0
-
     for row in instances:
         if row[att_index] == 'yes':
             Yes += 1
@@ -63,6 +62,7 @@ def calc_estart(instances, att_index):
             No += 1
 
     p, q = Yes / size, No / size
+
     e_start = -(p * log(p, 2)) - (q * log(q, 2))
 
     return e_start
@@ -115,7 +115,7 @@ def random_attribute_subset(attributes, F):
     return shuffled[:F]
 
 
-def split_tables(table, atts, final):
+def split_tables(table, atts, atts_dom, final):
     if len(atts) < 1:
         return
     this_atts = atts[:]
@@ -123,25 +123,49 @@ def split_tables(table, atts, final):
     best = get_best_index(table, this_atts)
     this_atts.remove(best)
     grouped = group_by(table, best)
-    for item in grouped:
-        if len(atts) == 1: #this checks if it will be a leaf
-            final.append(item)
-    for item in grouped:
-        split_tables(item, this_atts, final)
+    complete = True
+    if len(grouped) < len(atts_dom[best]):
+        complete = False
+    if complete:
+        for item in grouped:
+            if len(atts) == 1: #this checks if it will be a leaf
+                final.append(item)
+        '''
+        If one of the groups is empty, stop
+        '''
+        for item in grouped:
+            split_tables(item, this_atts, atts_dom, final)
+    else:
+        for item in table:
+            item.insert(best, 'NA')
+            item.remove(item[best + 1])
+        final.append(table)
     return final
 
-def split_best_tables(table, atts, final):
+def split_best_tables(table, atts, atts_dom, final):
     if len(atts) < 1:
         return
     this_atts = atts[:]
     best = get_best_index(table, this_atts)
     this_atts.remove(best)
     grouped = group_by(table, best)
-    for item in grouped:
-        if len(atts) == 1: #this checks if it will be a leaf
-            final.append(item)
-    for item in grouped:
-        split_best_tables(item, this_atts, final)
+    complete = True
+    if len(grouped) < len(atts_dom[best]):
+        complete = False
+    if complete:
+        for item in grouped:
+            if len(atts) == 1: #this checks if it will be a leaf
+                final.append(item)
+        '''
+        If one of the groups is empty, stop
+        '''
+        for item in grouped:
+            split_best_tables(item, this_atts, atts_dom, final)
+    else:
+        for item in table:
+            item.insert(best, 'NA')
+            item.remove(item[best + 1])
+        final.append(table)
     return final
 
 def split_tables2(table, atts, final):
@@ -223,6 +247,19 @@ def Stratified(table):
     training_set = empty[0] + empty[1]
     return [training_set, empty[2]]
 
+def find_leaf(tree, instance):
+    scores = []
+    for leaf in tree:
+        score = 0.0
+        for i in range(0, 3):
+            if leaf[0][i] != 'NA':
+                if leaf[0][i] == instance[i]:
+                    score += 1.0
+                else:
+                    score -= 1.0
+        scores.append(score)
+    return tree[scores.index(max(scores))]
+
 def get_forest(table, N):
     forrest = []
     class_tables = []
@@ -233,9 +270,9 @@ def get_forest(table, N):
         NTrainingAndTest = Stratified(table) #split up the table 2:1
         final = []
         if N == 1:
-            final = split_best_tables(NTrainingAndTest[0], [0, 1, 2], final)  # produces a decision treee
+            final = split_best_tables(NTrainingAndTest[0], [0, 1, 2], [['crew', 'first', 'second', 'third'], ['adult', 'child'], ['male', 'female']], final)  # produces a decision treee
         else:
-            final = split_tables(NTrainingAndTest[0], [0, 1, 2], final) #produces a decision treee
+            final = split_tables(NTrainingAndTest[0], [0, 1, 2], [['crew', 'first', 'second', 'third'], ['adult', 'child'], ['male', 'female']], final) #produces a decision treee
         for row in final:
             countYes = 0.0
             countNo = 0.0
@@ -247,17 +284,14 @@ def get_forest(table, N):
                         countNo += 1.0
             row.append([countYes / (len(row) * 1.0)])
             row.append([countNo / (len(row) * 1.0)])
+        #NTrainingAndTest[1] = NTrainingAndTest[1][1:3]
         for item in NTrainingAndTest[1]:
-            for row in final:
-                prediction = 'yes' # the default is no
-                for instance in row:
-                    if len(instance) > 2:
-                        if instance[0] == item[0] and instance[1] == item[1] and instance[2] == item[2]:
-                            probs = [row[len(row) - 2], row[len(row) - 1]]
-                            if probs[0] > probs[1]:
-                                prediction = 'yes'
-                            else:
-                                prediction = 'no'
+            leaf = find_leaf(final, item)
+            probs = [leaf[len(leaf) - 2], leaf[len(leaf) - 1]]
+            if probs[0] > probs[1]:
+                prediction = 'yes'
+            else:
+                prediction = 'no'
             realRank = item[3]
             # print(prediction + ' : ' + realRank)
             if prediction == realRank:
@@ -287,7 +321,7 @@ def make_predict(forrest, test):
     for item in test:
         for tree in forrest:
             for row in tree:
-                prediction = 'yes'  # the default is no
+                #prediction = 'yes'  # the default is no
                 if len(row) > 2:
                     for instance in row:
                         if len(instance) > 2:
@@ -315,7 +349,7 @@ def auto_make_predict(forrest, test):
     for item in test:
         for tree in forrest:
             for row in tree:
-                prediction = 4  # the default is 4
+                #prediction = 4  # the default is 4
                 for instance in row:
                     if type(instance) is list:
                         if len(instance) > 2:
@@ -510,15 +544,15 @@ def get_auto_forest(table, N):
         final = []
         atts2 = [1, 4, 6]
         if N == 1:
-            final = split_best_tables2(NTrainingAndTest[0], atts2, final)  # produces a decision treee
+            final = split_best_tables(NTrainingAndTest[0], atts2, [[3, 4, 5, 6, 8], [1, 2, 3, 4, 5], [70, 71, 72, 73, 74, 75, 76, 77, 78, 79]], final)  # produces a decision treee
         else:
-            final = split_tables2(NTrainingAndTest[0], atts2, final) #produces a decision treee
+            final = split_tables(NTrainingAndTest[0], atts2, [[3, 4, 5, 6, 8], [1, 2, 3, 4, 5], [70, 71, 72, 73, 74, 75, 76, 77, 78, 79]], final) #produces a decision treee
         for row in final:
             val = frequencies(row, 0)
             x = return_class(val)
             row.append([val[0][x]])
         for item in NTrainingAndTest[1]:
-            prediction = 0
+            #prediction = 0
             for row in final:
                 if row[0][1] == item[1] and row[0][4] == item[4] and row[0][6] == item[6]:
                     prediction = row[len(row)-1][0]
@@ -630,6 +664,7 @@ def step_2(table):
     print('N = 7, M = 20, F = 2')
     print('Titanic Data:')
     firstTrainingAndTest = Stratified(table)
+
     forrest = get_forest(firstTrainingAndTest[0], 20)
     top_forrest = get_top_trees(forrest[0], 7)
     acc = make_predict(top_forrest, firstTrainingAndTest[1])
@@ -644,18 +679,18 @@ def step_2(table):
     masterTable1 = change_mpg(master, 0)
     masterTable = change_mpg(masterTable1, 4)
     firstTrainingAndTest = Stratified(masterTable)
-
+'''
     forrest2 = get_auto_forest(firstTrainingAndTest[0], 20)
     top_forrest = get_top_trees(forrest2[0], 7)
     acc = auto_make_predict(top_forrest, firstTrainingAndTest[1])
     print('Accuracy of forrest for auto: ' + str(acc))
 
-    normal = get_auto_forest(firstTrainingAndTest[1], 1)
-    acc = auto_make_predict(normal[0], firstTrainingAndTest[1])
-    print('Accuracy of normal tree for auto: ' + str(acc))
+    #normal = get_auto_forest(firstTrainingAndTest[1], 1)
+    #acc = auto_make_predict(normal[0], firstTrainingAndTest[1])
+    #print('Accuracy of normal tree for auto: ' + str(acc))
 
     return forrest[1]
-
+'''
 def step_3(table): #N = 10, M = 5, F = 2
     print('N = 10, M = 5, F = 2')
     print('Titanic Data:')
@@ -680,7 +715,7 @@ def step_3(table): #N = 10, M = 5, F = 2
     acc = auto_make_predict(top_forrest, firstTrainingAndTest[1])
     print('Accuracy of forrest for auto: ' + str(acc))
 
-    normal = get_auto_forest(firstTrainingAndTest[1], 1)
+    normal = get_auto_forest(firstTrainingAndTest[0], 1)
     acc = auto_make_predict(normal[0], firstTrainingAndTest[1])
     print('Accuracy of normal tree for auto: ' + str(acc))
 
@@ -704,10 +739,10 @@ def main():
     tableMaster = read_csv('titanic.txt')
     x = step_2(tableMaster)
     print('')
-    y = step_3(tableMaster)
+    #y = step_3(tableMaster)
     print('')
     wisc = file_to_list('wisconsin.dat.txt')
-    step_4(wisc)
+    #step_4(wisc)
 
 if __name__ == '__main__':
     main()
