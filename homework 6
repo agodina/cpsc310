@@ -1,3 +1,9 @@
+'''
+Chris Leu, Andrea Godina, Chioma Savage
+CPSC 310
+11/22/16
+HW6
+'''
 import csv
 import random
 from random import randint
@@ -7,7 +13,9 @@ from collections import Counter
 import numpy as np
 import re
 
-
+'''
+Reads a CSV into a list
+'''
 def read_csv(filename):
     the_file = open(filename, 'r')  # opens the file
     the_reader = csv.reader(the_file, dialect='excel')
@@ -18,6 +26,9 @@ def read_csv(filename):
     the_file.close()  # closes the file
     return table  # returns the new table
 
+'''
+Reads a text file into a list
+'''
 def file_to_list(filename):
     #Puts the file into a 2D list
     table = []
@@ -32,14 +43,18 @@ def file_to_list(filename):
             table.append(my_list)
     return table
 
+'''
+Gets a column of a specific index
+'''
 def get_column(table, index):
     column = []  # creates a new table
     for row in table:
         column.append(row[index])
     return column
 
+
+# get unique list of attribute and class values
 def attribute_frequencies(instances, att_index, class_index):
-    # get unique list of attribute and class values
     att_vals = list(set(get_column(instances, att_index)))
     class_vals = list(set(get_column(instances, class_index)))
     # initialize the result
@@ -51,6 +66,9 @@ def attribute_frequencies(instances, att_index, class_index):
         result[att_val][1] += 1
     return result
 
+'''
+Caclulates eStart values
+'''
 def calc_estart(instances, att_index):
     size = len(instances)
     Yes = 0.0
@@ -66,7 +84,9 @@ def calc_estart(instances, att_index):
 
     return e_start
 
-
+'''
+Calculates eNew
+'''
 def calc_enew(instances, att_index, class_index):
     # get the length of the partition
     D = len(instances)
@@ -85,7 +105,9 @@ def calc_enew(instances, att_index, class_index):
         E_new += (D_j / D) * E_D_j
     return E_new
 
-
+'''
+Chooses which index is best to split a table on based on eStart and eNew
+'''
 def get_best_index(table, indexes):
     e_news = []
     for att in indexes:
@@ -95,6 +117,9 @@ def get_best_index(table, indexes):
         e_news.append(e_start - e_new)
     return indexes[e_news.index(max(e_news))]
 
+'''
+Splits a table into partions on a given index
+'''
 def group_by(table, att_index):
     # create unique list of grouping values
     grouping_values = list(set(get_column(table, att_index)))
@@ -107,13 +132,20 @@ def group_by(table, att_index):
         result[grouping_values.index(row[att_index])].append(row[:])
     return result
 
+'''
+Gets a random subset of attributes of size F
+'''
 def random_attribute_subset(attributes, F):
     # shuffle and pick first F
     shuffled = attributes[:] # make a copy
     random.shuffle(shuffled)
     return shuffled[:F]
 
-
+'''
+Splits a table into a decision tree and returns the leaf nodes
+For Titanic dataset
+With randomization
+'''
 def split_tables(table, atts, atts_dom, final):
     if len(atts) < 1:
         return
@@ -129,9 +161,6 @@ def split_tables(table, atts, atts_dom, final):
         for item in grouped:
             if len(atts) == 1: #this checks if it will be a leaf
                 final.append(item)
-        '''
-        If one of the groups is empty, stop
-        '''
         for item in grouped:
             split_tables(item, this_atts, atts_dom, final)
     else:
@@ -141,6 +170,11 @@ def split_tables(table, atts, atts_dom, final):
         final.append(table)
     return final
 
+'''
+Splits a table into a decision tree and returns the leaf nodes
+For Titanic dataset
+No randomization, traditional trees
+'''
 def split_best_tables(table, atts, atts_dom, final):
     if len(atts) < 1:
         return
@@ -155,9 +189,6 @@ def split_best_tables(table, atts, atts_dom, final):
         for item in grouped:
             if len(atts) == 1: #this checks if it will be a leaf
                 final.append(item)
-        '''
-        If one of the groups is empty, stop
-        '''
         for item in grouped:
             split_best_tables(item, this_atts, atts_dom, final)
     else:
@@ -167,6 +198,11 @@ def split_best_tables(table, atts, atts_dom, final):
         final.append(table)
     return final
 
+'''
+Splits a table into a decision tree and returns the leaf nodes
+For Auto dataset
+With randomization
+'''
 def split_tables2(table, atts, atts_dom, final):
     if len(atts) < 1:
         return
@@ -189,9 +225,6 @@ def split_tables2(table, atts, atts_dom, final):
         for item in grouped:
             if len(atts) == 1: #this checks if it will be a leaf
                 final.append(item)
-        '''
-        If one of the groups is empty, stop
-        '''
         for item in grouped:
             split_tables2(item, this_atts, atts_dom, final)
     else:
@@ -201,6 +234,11 @@ def split_tables2(table, atts, atts_dom, final):
         final.append(table)
     return final
 
+'''
+Splits a table into a decision tree and returns the leaf nodes
+For Auto dataset
+Without randomizationm, a traditional tree
+'''
 def split_best_tables2(table, atts, atts_dom, final):
     if len(atts) < 1:
         return
@@ -222,9 +260,6 @@ def split_best_tables2(table, atts, atts_dom, final):
         for item in grouped:
             if len(atts) == 1: #this checks if it will be a leaf
                 final.append(item)
-        '''
-        If one of the groups is empty, stop
-        '''
         for item in grouped:
             split_best_tables2(item, this_atts, atts_dom, final)
     else:
@@ -234,6 +269,11 @@ def split_best_tables2(table, atts, atts_dom, final):
         final.append(table)
     return final
 
+'''
+Splits a table into a decision tree and returns the leaf nodes
+For wisc dataset
+With randomization
+'''
 def split_tables_wisc(table, atts, atts_dom, final):
     if len(atts) < 1:
         return
@@ -249,9 +289,6 @@ def split_tables_wisc(table, atts, atts_dom, final):
         for item in grouped:
             if len(atts) == 1: #this checks if it will be a leaf
                 final.append(item)
-        '''
-        If one of the groups is empty, stop
-        '''
         for item in grouped:
             split_tables_wisc(item, this_atts, atts_dom, final)
     else:
@@ -261,6 +298,11 @@ def split_tables_wisc(table, atts, atts_dom, final):
         final.append(table)
     return final
 
+'''
+Splits a table into a decision tree and returns the leaf nodes
+For Auto dataset
+Without randomization, a traditional tree
+'''
 def split_best_tables_wisc(table, atts, atts_dom, final):
     if len(atts) < 1:
         return
@@ -275,9 +317,6 @@ def split_best_tables_wisc(table, atts, atts_dom, final):
         for item in grouped:
             if len(atts) == 1: #this checks if it will be a leaf
                 final.append(item)
-        '''
-        If one of the groups is empty, stop
-        '''
         for item in grouped:
             split_best_tables_wisc(item, this_atts, atts_dom, final)
     else:
@@ -287,7 +326,9 @@ def split_best_tables_wisc(table, atts, atts_dom, final):
         final.append(table)
     return final
 
-
+'''
+Gives a stratified set of partions
+'''
 def Stratified(table):
     randomized = table[:]  # this will randomize the table we passed in
     n = len(table)
@@ -308,6 +349,10 @@ def Stratified(table):
     training_set = empty[0] + empty[1]
     return [training_set, empty[2]]
 
+'''
+Selects which leaf a particular instance belongs to
+For titanic dataset
+'''
 def find_leaf(tree, instance):
     scores = []
     for leaf in tree:
@@ -322,6 +367,10 @@ def find_leaf(tree, instance):
         scores.append(score)
     return tree[scores.index(max(scores))]
 
+'''
+Gets a forrest of decision trees, adds their accuracy stats to them
+For the titanic dataset
+'''
 def get_forest(table, N):
     forrest = []
     class_tables = []
@@ -368,14 +417,23 @@ def get_forest(table, N):
         forrest.append(final)
         class_tables.append(class_table)
     return forrest, class_tables
-
+'''
+Helper function for finding the top trees
+'''
 def get_key(item):
     return item[len(item) - 1][0]
 
+'''
+Gets the M best trees in a forrest
+'''
 def get_top_trees(forrest, M):
     od_forrest = sorted(forrest, key=get_key, reverse=True)
     return od_forrest[0:M]
 
+'''
+Tests the best trees against the test set
+For titanic dataset
+'''
 def make_predict(forrest, test):
     predictions = []
     class_table = []
@@ -399,6 +457,10 @@ def make_predict(forrest, test):
     accuracy = TP / len(test) * 1.0
     return accuracy, class_table
 
+'''
+Tests the best trees against the test set
+For auto dataset
+'''
 def auto_make_predict(forrest, test):
     predictions = []
     accuracy = 0.0
@@ -422,6 +484,10 @@ def auto_make_predict(forrest, test):
     accuracy = TP / len(test) * 1.0
     return accuracy, class_table
 
+'''
+Tests the best trees against the test set
+For auto dataset
+'''
 def wisc_make_predict(forrest, test):
     predictions = []
     accuracy = 0.0
@@ -449,7 +515,10 @@ def wisc_make_predict(forrest, test):
     accuracy = TP / len(test) * 1.0
     return accuracy, class_table
 
-
+'''
+Gets the best attribute to split on based on eStart and eNew
+For auto and wisc dataset
+'''
 def get_best_index2(table, indexes):
     e_news = []
     for att in indexes:
@@ -458,6 +527,10 @@ def get_best_index2(table, indexes):
         e_news.append(e_start - e_new)
     return indexes[e_news.index(max(e_news))]
 
+'''
+Calculates the eStart value
+For the auto dataset
+'''
 def estart_car(instances, index):
     empty = []
     count = 0.0
@@ -477,6 +550,9 @@ def estart_car(instances, index):
             e_start += -((j/size) * log((j/size),2))
     return e_start
 
+'''
+Selects what DOE class a car with a certain MPG belongs to
+'''
 def DOE_class(mpg):
     mpg = float(mpg)
     guessRank = -1
@@ -502,6 +578,9 @@ def DOE_class(mpg):
         guessRank = 1
     return guessRank
 
+'''
+Selects what weight class a car with a certain weight belongs to
+'''
 def weight_class(weight):
     weight = int(weight)
     guessWeight = -1
@@ -517,6 +596,9 @@ def weight_class(weight):
         guessWeight = 1
     return guessWeight
 
+'''
+Converts MPG and weight values to their categorical equivalents
+'''
 def change_mpg(instances, att_index):
     if att_index == 0:
         for row in instances:
@@ -585,6 +667,10 @@ def auto_confusion(table):
     print ('Linear Regression(Stratified 10-fold Cross Validation Results):')
     print (tabulate(confusion_table, headers=["MPG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Total", "Recognition(%)"]))
 
+'''
+Selects which leaf a particular instance belongs to
+For auto dataset
+'''
 def find_auto_leaf(tree, instance):
     scores = []
     for leaf in tree:
@@ -611,6 +697,10 @@ def find_auto_leaf(tree, instance):
         scores.append(score)
     return tree[scores.index(max(scores))]
 
+'''
+Gets a forrest of decision trees, adds their accuracy stats to them
+For the auto dataset
+'''
 def get_auto_forest(table, N):
     forrest = []
     class_tables = []
@@ -680,6 +770,10 @@ def titanic_confussion(table):
     print ('===================================================================================')
     print (tabulate(confusion_table, headers=["Survived", "Yes", "No" "Total", "Recognition(%)"]))
 
+'''
+Selects which leaf a particular instance belongs to
+For wisc dataset
+'''
 def find_wisc_leaf(tree, instance):
     scores = []
     for leaf in tree:
@@ -695,7 +789,10 @@ def find_wisc_leaf(tree, instance):
     return tree[scores.index(max(scores))]
 
 
-
+'''
+Gets a forrest of decision trees, adds their accuracy stats to them
+For the wisc dataset
+'''
 def get_wisc_forrest(table, N):
     forrest = []
     class_tables = []
@@ -883,12 +980,12 @@ def step_4(table):
 
 def main():
     tableMaster = read_csv('titanic.txt')
-    #step_2(tableMaster)
+    step_2(tableMaster)
     print('')
     step_3(tableMaster)
     print('')
-    wisc = file_to_list('wisconsin.txt')
-    #tep_4(wisc)
+    wisc = file_to_list('wisconsin.dat.txt')
+    step_4(wisc)
 
 if __name__ == '__main__':
     main()
