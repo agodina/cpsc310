@@ -1,0 +1,85 @@
+'''
+Chris Leu, Andrea Godina, Chioma Savage
+CPSC 310
+11/22/16
+HW7
+'''
+import csv
+import random
+from random import randint
+from tabulate import tabulate
+from math import log
+from collections import Counter
+import numpy as np
+import re
+
+
+'''
+Reads a text file into a list
+'''
+def file_to_list(filename):
+    #Puts the file into a 2D list
+    table = []
+    f = open(filename, 'r')
+    for row in f:
+        my_list = re.split(',|\n', row)
+        good = True
+        for token in my_list: #removes any row with missing values
+            if token == 'NA':
+                good = False
+        if good:
+            index = len(my_list)
+            toRemove = my_list[index - 1]
+            my_list.remove(toRemove)
+            table.append(my_list)
+    return table
+
+'''
+Reads a CSV into a list
+'''
+def read_csv(filename):
+    the_file = open(filename, 'r')  # opens the file
+    the_reader = csv.reader(the_file, dialect='excel')
+    table = []  # makes an empty table
+    for row in the_reader:
+        if len(row) > 0:
+            table.append(row)  # adds each row to the table
+    the_file.close()  # closes the file
+    return table  # returns the new table
+
+def get_all_vals(table):
+    vals = []
+    for row in table:
+        for item in row:
+            vals.append(item)
+    return list(set(vals))
+
+def combine(vals):
+    combos = []
+    for i in range(0, len(vals)):
+        for j in range(i, len(vals)):
+            if i != j:
+                combo = vals[i] + ' ' + vals[j]
+                combos.append(combo)
+    return combos
+
+
+def k_l_subsets(itemset):
+    k = len(itemset)
+    return [itemset[:i] + itemset[i + 1:] for i in range(k)]
+
+def apriori_alg(table):
+    vals = get_all_vals(table)
+    print(vals)
+    sets = combine(vals)
+    print(sets)
+
+
+def main():
+    tableMaster = read_csv('titanic.txt')
+    tableMaster = tableMaster[:3]
+    apriori_alg(tableMaster)
+
+
+if __name__ == '__main__':
+    main()
