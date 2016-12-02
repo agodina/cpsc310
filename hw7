@@ -47,6 +47,9 @@ def read_csv(filename):
     the_file.close()  # closes the file
     return table  # returns the new table
 
+'''
+Gets all unique vals in a table
+'''
 def get_all_vals(table):
     vals = []
     for row in table:
@@ -54,25 +57,82 @@ def get_all_vals(table):
             vals.append(item)
     return list(set(vals))
 
-def combine(vals):
+'''
+Calculates the support value for a given itemset
+'''
+def get_support(itemset, table):
+    countS = 0.0
+    for row in table:
+        check = 0.0
+        for word in row:
+            for item in itemset:
+                if word == item:
+                    check += 1.0
+        if check == len(itemset):
+            countS += 1.0
+    return countS / (len(table) * 1.0)
+
+'''
+Creates the L2 list
+'''
+def L2(vals, table, support_level):
     combos = []
     for i in range(0, len(vals)):
         for j in range(i, len(vals)):
             if i != j:
-                combo = vals[i] + ' ' + vals[j]
-                combos.append(combo)
+                combo = [vals[i], vals[j]]
+                if get_support(combo, table) > support_level:
+                    combos.append(combo)
     return combos
 
+'''
+Unions two itemsets
+'''
+def AuB(listA, listB):
+    union = []
+    for item in listA:
+        union.append(item)
+    for item in listB:
+        union.append(item)
+    return list(set(union))
 
+'''
+Gets the Lk list
+'''
+def LK(vals, prevVals, table, support_level):
+    Ck = []
+    for i in range(0, len(vals) - 1):
+        if vals[i][0:-1] == vals[i+1][0:-1]:
+            union = AuB(vals[i], vals[i+1])
+            subsets = k_l_subsets(union)
+            good = False
+            for item in vals:
+                for set in subsets:
+                    if item == set:
+                        good = True
+            if good:
+                if get_support(union, table) >= support_level:
+                    Ck.append(union)
+    return Ck
+
+'''
+Gets all subsets of an itemset
+'''
 def k_l_subsets(itemset):
     k = len(itemset)
     return [itemset[:i] + itemset[i + 1:] for i in range(k)]
 
 def apriori_alg(table):
+    support_level = .6
+    confidence_level = .6
+    for item in table:
+        print(item)
     vals = get_all_vals(table)
     print(vals)
-    sets = combine(vals)
+    sets = L2(vals, table, support_level)
     print(sets)
+    sets2 = LK(sets, vals, table, support_level)
+    print(sets2)
 
 
 def main():
