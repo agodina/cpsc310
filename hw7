@@ -99,7 +99,7 @@ def AuB(listA, listB):
 '''
 Gets the Lk list
 '''
-def LK(vals, prevVals, table, support_level):
+def LK(vals, table, support_level):
     Ck = []
     for i in range(0, len(vals) - 1):
         if vals[i][0:-1] == vals[i+1][0:-1]:
@@ -125,14 +125,18 @@ def k_l_subsets(itemset):
 def apriori_alg(table):
     support_level = .6
     confidence_level = .6
-    for item in table:
-        print(item)
+    #for item in table:
+        #print(item)
     vals = get_all_vals(table)
-    print(vals)
     sets = L2(vals, table, support_level)
+    empty = False
+    while empty == False:
+        newSets = LK(sets, table, support_level)
+        if len(newSets) == 0:
+            empty = True
+        else:
+            sets = newSets
     print(sets)
-    sets2 = LK(sets, vals, table, support_level)
-    print(sets2)
 
 
 def main():
