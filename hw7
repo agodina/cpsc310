@@ -170,6 +170,16 @@ def get_confidence(LHS, RHS, table):
             countL += 1.0
     return countU / countL
 
+
+def get_lift(lhs, rhs, table):
+    sup_l = get_support(lhs,table)
+    sup_r = get_support(rhs, table)
+    union = AuB(rhs, lhs)
+    sup_union = get_support(union, table)
+    lift = sup_union/(sup_l*sup_r)
+    return lift
+    
+
 def get_rules(itemsets, table):
     print(itemsets)
     for item in itemsets:
