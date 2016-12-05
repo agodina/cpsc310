@@ -12,6 +12,7 @@ from math import log
 from collections import Counter
 import numpy as np
 import re
+import itertools
 
 
 '''
@@ -170,36 +171,72 @@ def get_confidence(LHS, RHS, table):
             countL += 1.0
     return countU / countL
 
+def convert_tuples(tuples):
+    newList = []
+    for item in tuples:
+        if len(item) == 1:
+            newList.append(item[0])
+        else:
+            newList.append(item)
+    return newList
+
 
 def get_lift(lhs, rhs, table):
-    sup_l = get_support(lhs,table)
+    sup_l = get_support(lhs, table)
     sup_r = get_support(rhs, table)
     union = AuB(rhs, lhs)
     sup_union = get_support(union, table)
-    lift = sup_union/(sup_l*sup_r)
+    lift = sup_union / (sup_l * sup_r)
     return lift
-    
+
+def get_rule_support(LHS, RHS, table):
+    union = []
+    for item in LHS:
+        union.append(item)
+    for item in RHS:
+        union.append(item)
+    return get_support(union, table)
 
 def get_rules(itemsets, table):
-    print(itemsets)
-    for item in itemsets:
-        rules = []
-        for i in range(0, len(item)):
-            LHS = item[:i] + item[i + 1:]
-            RHS = [item[i]]
-            print(LHS)
-            print(RHS)
-            print(get_confidence(LHS, RHS, table))
-            print('')
+    rules = []
+    for set in itemsets:
+        for i in range(1, len(set)):
+            temp = (itertools.combinations(set, i)) #generates all subsets of lenght i of the itemset
+            myList = list(temp)
+            subsets = convert_tuples(myList) #converts it to a list
+            for subset in subsets:
+                tempSet = set[:]
+                RHS = subset;
+                if i > 1:
+                    for item in RHS:
+                        tempSet.remove(item)
+                else:
+                    tempSet.remove(RHS)
+                LHS = tempSet
+                if i > 1:
+                    conf = get_confidence(LHS, RHS, table)
+                    lift = get_lift(LHS, RHS, table)
+                    support = get_rule_support(LHS, RHS, table)
+                else:
+                    conf = get_confidence(LHS, [RHS], table)
+                    lift = get_lift(LHS, [RHS], table)
+                    support = get_rule_support(LHS, [RHS], table)
+                if (conf <= .66):
+                    print('LHS: ' + str(LHS) + ' | RHS: ' + str(RHS))
+                    print('hello')
+                    break
+                else:
+                    rules.append('LHS: ' + str(LHS) + ' | RHS: ' + str(RHS) + ' | confidence: ' + str(conf) + ' | lift: ' + str(lift) + ' | support: ' + str(support))
+        return rules
+
 
 def main():
     tableMaster = read_csv('titanic.txt')
-    tableMaster = tableMaster[:5]
-    for item in tableMaster:
-        print(item)
+    #tableMaster = tableMaster[:10]
     Ln = apriori_alg(tableMaster)
-    get_rules(Ln, tableMaster)
-
+    rules = get_rules(Ln, tableMaster)
+    for item in rules:
+        print(item)
 
 if __name__ == '__main__':
     main()
