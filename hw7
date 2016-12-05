@@ -81,6 +81,9 @@ def L2(vals, table, support_level):
         for j in range(i, len(vals)):
             if i != j:
                 combo = [vals[i], vals[j]]
+                #print(combo)
+                #print(get_support(combo, table))
+                #print('')
                 if get_support(combo, table) > support_level:
                     combos.append(combo)
     return combos
@@ -123,7 +126,7 @@ def k_l_subsets(itemset):
     return [itemset[:i] + itemset[i + 1:] for i in range(k)]
 
 def apriori_alg(table):
-    support_level = .6
+    support_level = .35
     confidence_level = .6
     #for item in table:
         #print(item)
@@ -132,17 +135,60 @@ def apriori_alg(table):
     empty = False
     while empty == False:
         newSets = LK(sets, table, support_level)
+        #print(newSets)
         if len(newSets) == 0:
             empty = True
         else:
             sets = newSets
-    print(sets)
+    return sets
 
+def get_confidence(LHS, RHS, table):
+    countU = 0.0
+    union = []
+    unionL = []
+    for item in LHS:
+        union.append(item)
+        unionL.append(item)
+    for item in RHS:
+        union.append(item)
+    for row in table:
+        check = 0.0
+        for word in row:
+            for item in union:
+                if word == item:
+                    check += 1.0
+        if check == len(union):
+            countU += 1.0
+    countL = 0.0
+    for row in table:
+        check = 0.0
+        for word in row:
+            for item in unionL:
+                if word == item:
+                    check += 1.0
+        if check == len(unionL):
+            countL += 1.0
+    return countU / countL
+
+def get_rules(itemsets, table):
+    print(itemsets)
+    for item in itemsets:
+        rules = []
+        for i in range(0, len(item)):
+            LHS = item[:i] + item[i + 1:]
+            RHS = [item[i]]
+            print(LHS)
+            print(RHS)
+            print(get_confidence(LHS, RHS, table))
+            print('')
 
 def main():
     tableMaster = read_csv('titanic.txt')
-    tableMaster = tableMaster[:3]
-    apriori_alg(tableMaster)
+    tableMaster = tableMaster[:5]
+    for item in tableMaster:
+        print(item)
+    Ln = apriori_alg(tableMaster)
+    get_rules(Ln, tableMaster)
 
 
 if __name__ == '__main__':
