@@ -1,0 +1,295 @@
+'''
+Chris Leu, Andrea Godina, Chioma Mekkam
+CPSC 310
+11/22/16
+HW7
+'''
+import csv
+import random
+from random import randint
+from tabulate import tabulate
+from math import log
+from collections import Counter
+import numpy as np
+import re
+import itertools
+
+
+'''
+Reads a text file into a list
+'''
+def file_to_list(filename):
+    #Puts the file into a 2D list
+    table = []
+    f = open(filename, 'r')
+    for row in f:
+        my_list = re.split(',|\n', row)
+        good = True
+        for token in my_list: #removes any row with missing values
+            if token == 'NA':
+                good = False
+        if good:
+            index = len(my_list)
+            toRemove = my_list[index - 1]
+            my_list.remove(toRemove)
+            table.append(my_list)
+    return table
+
+'''
+Reads a CSV into a list
+'''
+def read_csv(filename):
+    the_file = open(filename, 'r')  # opens the file
+    the_reader = csv.reader(the_file, dialect='excel')
+    table = []  # makes an empty table
+    for row in the_reader:
+        if len(row) > 0:
+            table.append(row)  # adds each row to the table
+    the_file.close()  # closes the file
+    return table  # returns the new table
+
+'''
+Gets all unique vals in a table
+'''
+def get_all_vals(table):
+    vals = []
+    for row in table:
+        for item in row:
+            vals.append(item)
+    return list(set(vals))
+
+'''
+Calculates the support value for a given itemset
+'''
+def get_support(itemset, table):
+    countS = 0.0
+    for row in table:
+        check = 0.0
+        for word in row:
+            for item in itemset:
+                if word == item:
+                    check += 1.0
+        if check == len(itemset):
+            countS += 1.0
+    return countS / (len(table) * 1.0)
+
+'''
+Creates the L2 list
+'''
+def L2(vals, table, support_level):
+    combos = []
+    for i in range(0, len(vals)):
+        #x = 0
+        for j in range(i, len(vals)):
+            if i != j:
+                combo = [vals[i], vals[j]]
+                #print(combo)
+                #print(get_support(combo, table))
+                #print('')
+                if get_support(combo, table) > support_level:
+                    combos.append(combo)
+            #x=x+1
+    return combos
+
+'''
+Unions two itemsets
+'''
+def AuB(listA, listB):
+    union = []
+    for item in listA:
+        union.append(item)
+    for item in listB:
+        union.append(item)
+    return list(set(union))
+
+'''
+Gets the Lk list
+'''
+def LK(vals, table, support_level):
+    Ck = []
+    for i in range(0, len(vals) - 1):
+        if vals[i][0:-1] == vals[i+1][0:-1]:
+            union = AuB(vals[i], vals[i+1])
+            subsets = k_l_subsets(union)
+            good = False
+            for item in vals:
+                for set in subsets:
+                    if item == set:
+                        good = True
+            if good:
+                if get_support(union, table) >= support_level:
+                    Ck.append(union)
+    return Ck
+
+'''
+Gets all subsets of an itemset
+'''
+def k_l_subsets(itemset):
+    k = len(itemset)
+    return [itemset[:i] + itemset[i + 1:] for i in range(k)]
+
+def apriori_alg(table):
+    support_level = .35
+    confidence_level = .66
+    #for item in table:
+        #print(item)
+    vals = get_all_vals(table)
+    sets = L2(vals, table, support_level)
+    L2_sets = sets
+    empty = False
+    final = []
+    while empty == False:
+        newSets = LK(sets, table, support_level)
+        #print(newSets)
+        if len(newSets) == 0:
+            empty = True
+        else:
+            sets = newSets
+            final = final + sets
+    final = final + L2_sets
+    return final
+
+def get_confidence(LHS, RHS, table):
+    countU = 0.0
+    union = []
+    unionL = []
+    for item in LHS:
+        union.append(item)
+        unionL.append(item)
+    for item in RHS:
+        union.append(item)
+    for row in table:
+        check = 0.0
+        for word in row:
+            for item in union:
+                if word == item:
+                    check += 1.0
+        if check == len(union):
+            countU += 1.0
+    countL = 0.0
+    for row in table:
+        check = 0.0
+        for word in row:
+            for item in unionL:
+                if word == item:
+                    check += 1.0
+        if check == len(unionL):
+            countL += 1.0
+    return countU / countL
+
+def convert_tuples(tuples):
+    newList = []
+    for item in tuples:
+        if len(item) == 1:
+            newList.append(item[0])
+        else:
+            newList.append(item)
+    return newList
+
+
+def get_lift(lhs, rhs, table):
+    sup_l = get_support(lhs, table)
+    sup_r = get_support(rhs, table)
+    union = AuB(rhs, lhs)
+    sup_union = get_support(union, table)
+    lift = sup_union / (sup_l * sup_r)
+    return lift
+
+def get_rule_support(LHS, RHS, table):
+    union = []
+    for item in LHS:
+        union.append(item)
+    for item in RHS:
+        union.append(item)
+    return get_support(union, table)
+
+def get_rules(itemsets, table):
+    rules = []
+    pRules = []
+    for set in itemsets:
+        for i in range(1, len(set)):
+            temp = (itertools.combinations(set, i)) #generates all subsets of lenght i of the itemset
+            myList = list(temp)
+            subsets = convert_tuples(myList) #converts it to a list
+            for subset in subsets:
+                tempSet = set[:]
+                RHS = subset;
+                if i > 1:
+                    for item in RHS:
+                        tempSet.remove(item)
+                else:
+                    tempSet.remove(RHS)
+                LHS = tempSet
+                if i > 1:
+                    conf = get_confidence(LHS, RHS, table)
+                    lift = get_lift(LHS, RHS, table)
+                    support = get_rule_support(LHS, RHS, table)
+                else:
+                    conf = get_confidence(LHS, [RHS], table)
+                    lift = get_lift(LHS, [RHS], table)
+                    support = get_rule_support(LHS, [RHS], table)
+                if (conf <= .66):
+                    break
+                else:
+                    pRules.append([str(LHS) + ' => '+ str(RHS)] + [str(support)] + [str(conf)] + [str(lift)])
+                    #rules.append('LHS: ' + str(LHS) + ' | RHS: ' + str(RHS) + ' | confidence: ' + str(conf) + ' | lift: ' + str(lift) + ' | support: ' + str(support))
+    return rules, pRules
+
+def titanic_confussion(table):
+    # initializes the table
+    confusion_table = []
+    x = 1
+    for row in table:
+        confusion_table.append([str(x)+' '+ str(row[0])])
+        x = x+1
+
+    index = 0
+    for row in confusion_table:
+        row.append(table[index][1])
+        index = index+1
+
+    index = 0
+    for row in confusion_table:
+        row.append(table[index][2])
+        index = index+1
+
+
+    index = 0
+    for row in confusion_table:
+        row.append(table[index][3])
+        index = index+1
+
+
+    print ('===================================================================================')
+    print ('Titanic pretty print')
+    print ('===================================================================================')
+    print (tabulate(confusion_table, headers=["Assosiation rule", "Support", "Confidence" "Lift"]))
+
+def main():
+    tableMaster = read_csv('titanic.txt')
+    #tableMaster = tableMaster[:10]
+    Ln = apriori_alg(tableMaster)
+    rules = get_rules(Ln, tableMaster)
+    titanic_confussion(rules[1])
+
+    '''tableMushroom = read_csv('agaricus-lepiota.txt')
+    for row in tableMushroom:
+        for i in range(0, len(row)):
+            row[i] = row[i] + str(i)
+    print(tableMushroom[0])
+    print(len(tableMushroom))
+    Ln2 = apriori_alg(tableMushroom)
+    rules2 = get_rules(Ln2, tableMushroom)
+    for item in rules2[0]:
+        print(item)'''
+
+
+    '''list = get_all_vals(tableMaster)
+    Listt = L2(list, tableMaster, .25)
+    print Listt
+
+    for item in rules[0]:
+        print(item)'''
+
+if __name__ == '__main__':
+    main()
