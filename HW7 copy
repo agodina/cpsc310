@@ -317,7 +317,6 @@ def main():
     titanic_confussion(rules[1])
 
     tableMushroom = read_csv('agaricus-lepiota.txt')
-    tableMushroom = tableMushroom[:10]
     for row in tableMushroom:
         for i in range(0, len(row)):
             row[i] = row[i] + str(i)
