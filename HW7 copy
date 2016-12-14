@@ -79,7 +79,6 @@ Creates the L2 list
 def L2(vals, table, support_level):
     combos = []
     for i in range(0, len(vals)):
-        #x = 0
         for j in range(i, len(vals)):
             if i != j:
                 combo = [vals[i], vals[j]]
@@ -88,7 +87,6 @@ def L2(vals, table, support_level):
                 #print('')
                 if get_support(combo, table) > support_level:
                     combos.append(combo)
-            #x=x+1
     return combos
 
 '''
@@ -102,6 +100,9 @@ def AuB(listA, listB):
         union.append(item)
     return list(set(union))
 
+def compare(s, t):
+    return Counter(s) == Counter(t)
+
 '''
 Gets the Lk list
 '''
@@ -114,7 +115,7 @@ def LK(vals, table, support_level):
             good = False
             for item in vals:
                 for set in subsets:
-                    if item == set:
+                    if compare(set, item):
                         good = True
             if good:
                 if get_support(union, table) >= support_level:
@@ -129,25 +130,24 @@ def k_l_subsets(itemset):
     return [itemset[:i] + itemset[i + 1:] for i in range(k)]
 
 def apriori_alg(table):
-    support_level = .35
-    confidence_level = .66
+    Lks = []
+    support_level = .6
+    confidence_level = .6
     #for item in table:
         #print(item)
     vals = get_all_vals(table)
     sets = L2(vals, table, support_level)
-    L2_sets = sets
     empty = False
-    final = []
     while empty == False:
+        Lks.append(sets)
         newSets = LK(sets, table, support_level)
-        #print(newSets)
         if len(newSets) == 0:
             empty = True
         else:
             sets = newSets
-            final = final + sets
-    final = final + L2_sets
-    return final
+    '''for item in Lks:
+        print(item)'''
+    return Lks
 
 def get_confidence(LHS, RHS, table):
     countU = 0.0
@@ -231,9 +231,45 @@ def get_rules(itemsets, table):
                 if (conf <= .66):
                     break
                 else:
-                    pRules.append([str(LHS) + ' => '+ str(RHS)] + [str(support)] + [str(conf)] + [str(lift)])
-                    #rules.append('LHS: ' + str(LHS) + ' | RHS: ' + str(RHS) + ' | confidence: ' + str(conf) + ' | lift: ' + str(lift) + ' | support: ' + str(support))
+                    pRules.append([str(LHS) + ' => ' + str(RHS)] + [str(support)] + [str(conf)] + [str(lift)])
+                    rules.append('LHS: ' + str(LHS) + ' | RHS: ' + str(RHS) + ' | confidence: ' + str(conf) + ' | lift: ' + str(lift) + ' | support: ' + str(support))
     return rules, pRules
+
+def mushroom_Rules(itemsets, table):
+    rules = []
+    pRules = []
+    sets = itemsets[len(itemsets) - 1]
+    for set in sets:
+        for i in range(1, len(set)):
+            temp = (itertools.combinations(set, i))  # generates all subsets of lenght i of the itemset
+            myList = list(temp)
+            subsets = convert_tuples(myList)  # converts it to a list
+            for subset in subsets:
+                tempSet = set[:]
+                RHS = subset;
+                if i > 1:
+                    for item in RHS:
+                        tempSet.remove(item)
+                else:
+                    tempSet.remove(RHS)
+                LHS = tempSet
+                if i > 1:
+                    conf = get_confidence(LHS, RHS, table)
+                    lift = get_lift(LHS, RHS, table)
+                    support = get_rule_support(LHS, RHS, table)
+                else:
+                    conf = get_confidence(LHS, [RHS], table)
+                    lift = get_lift(LHS, [RHS], table)
+                    support = get_rule_support(LHS, [RHS], table)
+                if (conf <= .66):
+                    break
+                else:
+                    pRules.append([str(LHS) + ' => ' + str(RHS)] + [str(support)] + [str(conf)] + [str(lift)])
+                    rules.append(
+                            'LHS: ' + str(LHS) + ' | RHS: ' + str(RHS) + ' | confidence: ' + str(conf) + ' | lift: ' + str(
+                                lift) + ' | support: ' + str(support))
+    return rules, pRules
+
 
 def titanic_confussion(table):
     # initializes the table
@@ -261,35 +297,36 @@ def titanic_confussion(table):
 
 
     print ('===================================================================================')
-    print ('Titanic pretty print')
+    print ('Pretty Print')
     print ('===================================================================================')
-    print (tabulate(confusion_table, headers=["Assosiation rule", "Support", "Confidence" "Lift"]))
+    print (tabulate(confusion_table,
+                    headers=["Assosiation Rule", "Support", "Confidence", "Lift"]))
 
 def main():
+
     tableMaster = read_csv('titanic.txt')
-    #tableMaster = tableMaster[:10]
+    #tableMaster = tableMaster[:1# 0]
     Ln = apriori_alg(tableMaster)
-    rules = get_rules(Ln, tableMaster)
+    for item in Ln:
+        rules = get_rules(item, tableMaster)
+        '''for item in rules:
+            print(item)
+    print('')
+    quit()'''
+    print('Titanic:')
     titanic_confussion(rules[1])
 
-    '''tableMushroom = read_csv('agaricus-lepiota.txt')
+    tableMushroom = read_csv('agaricus-lepiota.txt')
+    tableMushroom = tableMushroom[:10]
     for row in tableMushroom:
         for i in range(0, len(row)):
             row[i] = row[i] + str(i)
-    print(tableMushroom[0])
-    print(len(tableMushroom))
-    Ln2 = apriori_alg(tableMushroom)
-    rules2 = get_rules(Ln2, tableMushroom)
-    for item in rules2[0]:
-        print(item)'''
+    Ln = apriori_alg(tableMushroom)
+    rules2 = mushroom_Rules(Ln, tableMushroom)
+    print ("")
+    print('Mushroom:')
+    titanic_confussion(rules2[1])
 
-
-    '''list = get_all_vals(tableMaster)
-    Listt = L2(list, tableMaster, .25)
-    print Listt
-
-    for item in rules[0]:
-        print(item)'''
 
 if __name__ == '__main__':
     main()
